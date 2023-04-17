@@ -33,4 +33,4 @@ def namespace_to_dict(ns: SimpleNamespace) -> Dict[str, Any]:
         A dict with the attributes of the namespace as keys. Any attributes whose values are
         also namespaces will be recursively converted to dicts as well.
     """
-    return {k: namespace_to_dict(v) if isinstance(ns, SimpleNamespace) else v for k, v in ns.__dict__.items()}
+    return {k: namespace_to_dict(v) if isinstance(v, SimpleNamespace) else v for k, v in ns.__dict__.items()}
