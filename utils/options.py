@@ -5,9 +5,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 
-import dotdict as dd
 import torch
 import yaml
+
+import utils.dotdict as dd
 
 
 def parse_arguments(args: List[str]) -> Dict[str, Any]:
