@@ -32,9 +32,6 @@ class SceneFlow:
 
         Raises:
             NotImplementedError: If the subclass has not implemented this.
-
-        Returns:
-            (N,3) tensor of flow predictions.
         """
         raise NotImplementedError()
 

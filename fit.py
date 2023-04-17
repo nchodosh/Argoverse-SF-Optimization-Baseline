@@ -3,6 +3,7 @@
 import argparse
 import importlib
 from pathlib import Path
+from random import seed, shuffle
 from typing import Tuple
 
 import numpy as np
@@ -27,6 +28,7 @@ def fit(
     split: str = "val",
     output_root: str = "outputs",
     mask_file: str = "val-masks.zip",
+    subset_size: int = 0,
     chunk: Tuple[int, int] = (1, 1),
 ) -> None:
     """Fit a scene flow model.
@@ -39,6 +41,9 @@ def fit(
         split: Split to generate perdictions for (test, train or val),
         output_root: Root directory to save output files in,
         mask_file: Path to the appropriate mask file for choosing input points.
+        subset_size: Fit a random subset of the examples for faster testing.
+                     If 0 use the whole dataset. Always uses seed 0 and random.shuffle to
+                     get a consistent but arbitrarty ordering.
         chunk: Tuple of (N, M) for splitting the input into N
                non-overlapping chunks and only evaluating the Mth chunk.
                Useful for running multiple jobs in parallel.
@@ -49,6 +54,10 @@ def fit(
 
     data_loader = SceneFlowDataloader(data_root, "av2", split)
     inds = get_eval_subset(data_loader)
+    if subset_size > 0:
+        seed(0)
+        shuffle(inds)
+        inds = inds[:subset_size]
     inds = np.array_split(inds, chunk[0])[chunk[1] - 1]
 
     for i in tqdm(inds):
@@ -101,6 +110,7 @@ if __name__ == "__main__":
         help="split the job into N deterministic chucnks and only process one",
     )
     parser.add_argument("--chunk_number", type=int, default=1, help="which chunk to process")
+    parser.add_argument("--subset", type=int, default=0, help="If >0 only use SUBSET random examples from the dataset.")
 
     args = parser.parse_args()
 
@@ -116,5 +126,6 @@ if __name__ == "__main__":
         split=args.split,
         data_root=args.inputs,
         output_root=args.outputs,
+        subset_size=args.subset,
         chunk=(args.chunks, args.chunk_number),
     )

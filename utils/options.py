@@ -135,14 +135,13 @@ def load_saved_options(fname: Path, override_args: Optional[List[str]] = None) -
     return opt
 
 
-def save_options_file(opt: SimpleNamespace, opt_fname: str) -> None:
+def save_options_file(opt: SimpleNamespace, opt_path: Path) -> None:
     """Save an options namespace to a YAML file.
 
     Args:
         opt: The options to save.
-        opt_fname: The path of the file to save to.
+        opt_path: The path of the file to save to.
     """
-    opt_path = Path(opt_fname)
     if opt_path.exists():
         with open(opt_path) as file:
             opt_old = dd.dict_to_namespace(yaml.safe_load(file))
@@ -152,7 +151,7 @@ def save_options_file(opt: SimpleNamespace, opt_fname: str) -> None:
             with open(opt_new_fname, "w") as file:
                 yaml.safe_dump(dd.namespace_to_dict(opt), file, default_flow_style=False, indent=4)
             print("existing options file found (different from current one)...")
-            os.system("diff {} {}".format(opt_fname, opt_new_fname))
+            os.system("diff {} {}".format(str(opt_path), opt_new_fname))
             os.system("rm {}".format(opt_new_fname))
             override = None
             while override not in ["y", "n"]:
@@ -162,5 +161,5 @@ def save_options_file(opt: SimpleNamespace, opt_fname: str) -> None:
                 exit()
         # else: print("existing options file found (identical)")
     # else: print("(creating new options file...)")
-    with open(opt_fname, "w") as file:
+    with open(opt_path, "w") as file:
         yaml.safe_dump(dd.namespace_to_dict(opt), file, default_flow_style=False, indent=4)

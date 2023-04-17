@@ -3,7 +3,7 @@
 import copy
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 import torch
@@ -13,7 +13,17 @@ from kornia.geometry.liegroup import Se3
 from kornia.geometry.linalg import transform_points
 
 
-def trunc_chamfer(X, Y, r):
+def trunc_nn(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
+    """Compute the truncated nearest neighbor distnce from X to Y.
+
+    Args:
+        X: (N, D) tensor of points.
+        Y: (M, D) tensor of points.
+        r: The maximum nearest neighbor distance.
+
+    Returns:
+        (N,) tensor containing min(r, min_{y} ||x - y||).
+    """
     if len(X) == 0:
         return torch.zeros(0).to(X.device)
     assigned = gnn.nearest(X, Y)
@@ -22,8 +32,18 @@ def trunc_chamfer(X, Y, r):
     return errs
 
 
-def trunc_chamfer_symmetric(X, Y, r):
-    return torch.cat([trunc_chamfer(X, Y, r), trunc_chamfer(Y, X, r)], dim=0)
+def trunc_chamfer(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
+    """Compute the a symmetric truncated nearest neighbor distnce between X to Y.
+
+    Args:
+        X: (N, D) tensor of points.
+        Y: (M, D) tensor of points.
+        r: The maximum nearest neighbor distance.
+
+    Returns:
+        (N,) tensor containing trunc_nn(X, Y, r) concatenate with trunc_nn(Y, X, r).
+    """
+    return torch.cat([trunc_nn(X, Y, r), trunc_nn(Y, X, r)], dim=0)
 
 
 class SceneFlow:
@@ -131,7 +151,7 @@ class SceneFlow:
         Returns:
             The total loss on the predictions.
         """
-        return trunc_chamfer_symmetric(pcl_0 + flow_pred, pcl_1, self.opt.optim.chamfer_radius).mean()
+        return trunc_chamfer(pcl_0 + flow_pred, pcl_1, self.opt.optim.chamfer_radius).mean()
 
     def load_parameters(self, filename: Path) -> None:
         """Load saved parameters for the underlying model.
@@ -199,6 +219,7 @@ class ImplicitFunction(torch.nn.Module):
         )
 
         # activation functions
+        self.activ: Callable[[torch.Tensor], torch.Tensor] = lambda x: x
         if opt.arch.activ == "relu":
             self.activ = torch.nn.functional.relu
         elif opt.arch.activ == "sigmoid":
