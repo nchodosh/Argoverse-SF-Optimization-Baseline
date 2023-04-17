@@ -1,0 +1,16 @@
+arch:
+    L: 4
+    activ: relu
+    backward_flow: true
+    filter_size: 128
+    motion_compensate: false
+    pos_enc: false
+    pos_scale: 100
+cfg_name: nsfp
+device: cpu
+optim:
+    chamfer_radius: 2
+    early_patience: 100
+    iters: 2000
+    lr: 0.004
+    weight_decay: 0.0001
