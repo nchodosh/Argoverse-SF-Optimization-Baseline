@@ -7,6 +7,7 @@ profile = "black"
 
 [tool.mypy]
 ignore_missing_imports = true
+strict = true
 
 [tool.black]
 line-length = 120

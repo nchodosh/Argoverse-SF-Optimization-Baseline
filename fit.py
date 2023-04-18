@@ -79,7 +79,9 @@ def fit(
         model.fit(pcl_0, pcl_1, ego1_SE3_ego0, flow)
         pred_flow = model(pcl_0)
         is_dynamic = pred_flow.norm(dim=-1) >= 0.05
-        write_output_file(pred_flow, is_dynamic, s0.sweep_uuid, output_dir)
+        write_output_file(
+            pred_flow.detach().cpu().numpy(), is_dynamic.detach().cpu().numpy(), s0.sweep_uuid, output_dir
+        )
 
 
 if __name__ == "__main__":
