@@ -111,6 +111,8 @@ class SceneFlow:
         self.e1_SE3_e0 = e1_SE3_e0
         if self.opt.arch.motion_compensate:
             pcl_1 = transform_points(e1_SE3_e0.inverse().matrix(), pcl_1).detach()
+            rigid_flow = (transform_points(self.e1_SE3_e0.matrix(), pcl_0) - pcl_0).detach()
+            flow = flow - rigid_flow
 
         pcl_0 = pcl_0.to(self.opt.device)
         pcl_1 = pcl_1.to(self.opt.device)
