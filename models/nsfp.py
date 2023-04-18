@@ -133,10 +133,10 @@ class SceneFlow:
 
             optim.step()
             if flow is not None:
-                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f}")
-            else:
                 epe = (flow_pred - flow).norm(dim=-1).mean().detach().item()
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe: {epe:.3f}")
+            else:
+                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f}")
 
         self.graph.load_state_dict(best_params)
 
