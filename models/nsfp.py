@@ -12,6 +12,8 @@ import tqdm
 from kornia.geometry.liegroup import Se3
 from kornia.geometry.linalg import transform_points
 
+import utils.refine
+
 
 def trunc_nn(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
     """Compute the truncated nearest neighbor distnce from X to Y.
@@ -24,8 +26,6 @@ def trunc_nn(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
     Returns:
         (N,) tensor containing min(r, min_{y} ||x - y||).
     """
-    if len(X) == 0:
-        return torch.zeros(0).to(X.device)
     assigned = gnn.nearest(X, Y)
     errs = ((X - Y[assigned]) ** 2).sum(-1)
     errs = torch.clamp(errs, 0, r)
@@ -62,6 +62,7 @@ class SceneFlow:
         self.opt = opt
         self.e1_SE3_e0: Optional[Se3] = None
 
+    @torch.no_grad()
     def __call__(self, pcl_0: torch.Tensor) -> torch.Tensor:
         """Evaluate the model on a a set of points.
 
@@ -74,12 +75,17 @@ class SceneFlow:
         Returns:
             flow: (N,3) tensor of flow predictions.
         """
-        pred = self.graph(self.opt, pcl_0.to(self.opt.device))
+        pred = self.fw(self.opt, pcl_0.to(self.opt.device)).detach().cpu()
+        if self.opt.arch.refine:
+            pred = torch.from_numpy(utils.refine.refine_flow(pcl_0.numpy(), pred.numpy()))
+            print("refined")
+
         if self.opt.arch.motion_compensate:
             if self.e1_SE3_e0 is None:
                 raise RuntimeError("Trying to evaluate a model that has not been fit!")
             rigid_flow = transform_points(self.e1_SE3_e0.matrix(), pcl_0) - pcl_0
             pred = pred + rigid_flow
+
         return pred
 
     def fit(
@@ -100,10 +106,11 @@ class SceneFlow:
                    progresso on thet test metrics.
         """
         early_stopping = EarlyStopping(patience=self.opt.optim.early_patience, min_delta=0.0001)
-        self.graph = ImplicitFunction(self.opt).to(self.opt.device)
+        self.fw = ImplicitFunction(self.opt).to(self.opt.device)
+        self.bw = ImplicitFunction(self.opt).to(self.opt.device)
         self.e1_SE3_e0 = e1_SE3_e0
         if self.opt.arch.motion_compensate:
-            pcl_1 = transform_points(e1_SE3_e0.inverse().matrix(), pcl_1)
+            pcl_1 = transform_points(e1_SE3_e0.inverse().matrix(), pcl_1).detach()
 
         pcl_0 = pcl_0.to(self.opt.device)
         pcl_1 = pcl_1.to(self.opt.device)
@@ -111,47 +118,56 @@ class SceneFlow:
             flow = flow.to(self.opt.device)
 
         optim = torch.optim.Adam(
-            [dict(params=self.graph.parameters(), lr=self.opt.optim.lr, weight_decay=self.opt.optim.weight_decay)]
+            [
+                dict(params=self.fw.parameters(), lr=self.opt.optim.lr, weight_decay=self.opt.optim.weight_decay),
+                dict(params=self.bw.parameters(), lr=self.opt.optim.lr, weight_decay=self.opt.optim.weight_decay),
+            ]
         )
 
         pbar = tqdm.trange(self.opt.optim.iters, desc="optimizing...", dynamic_ncols=True)
 
         best_loss = float("inf")
-        best_params = self.graph.state_dict()
+        best_params = self.fw.state_dict()
         for _ in pbar:
+            fw_flow_pred = self.fw(self.opt, pcl_0)
+            bw_flow_pred = self.bw(self.opt, pcl_0 + fw_flow_pred)
+            loss = self.compute_loss(fw_flow_pred, bw_flow_pred, pcl_0, pcl_1)
             optim.zero_grad()
+            loss.backward()
+            optim.step()
 
-            flow_pred = self.graph(self.opt, pcl_0)
-
-            loss = self.compute_loss(flow_pred, pcl_0, pcl_1)
             if best_loss > loss.detach().item():
                 best_loss = loss.detach().item()
-                best_params = copy.deepcopy(self.graph.state_dict())
-            loss.backward()
+                best_params = copy.deepcopy(self.fw.state_dict())
+
             if early_stopping.step(loss):
                 break
 
-            optim.step()
             if flow is not None:
-                epe = (flow_pred - flow).norm(dim=-1).mean().detach().item()
+                epe = (fw_flow_pred - flow).norm(dim=-1).mean().detach().item()
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe: {epe:.3f}")
             else:
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f}")
 
-        self.graph.load_state_dict(best_params)
+        self.fw.load_state_dict(best_params)
 
-    def compute_loss(self, flow_pred: torch.Tensor, pcl_0: torch.Tensor, pcl_1: torch.Tensor) -> torch.Tensor:
+    def compute_loss(
+        self, fw_flow_pred: torch.Tensor, bw_flow_pred: torch.Tensor, pcl_0: torch.Tensor, pcl_1: torch.Tensor
+    ) -> torch.Tensor:
         """Compute the optimization loss.
 
         Args:
             flow_pred: The predicted flow vectors.
+            flow_pred: The predicted backward flow vectors.
             pcl_0: First point cloud.
             pcl_1: Second point cloud.
 
         Returns:
             The total loss on the predictions.
         """
-        return trunc_chamfer(pcl_0 + flow_pred, pcl_1, self.opt.optim.chamfer_radius).mean()
+        fw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred, pcl_1, self.opt.optim.chamfer_radius).mean()
+        bw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred + bw_flow_pred, pcl_0, self.opt.optim.chamfer_radius).mean()
+        return fw_chamf + bw_chamf
 
     def load_parameters(self, filename: Path) -> None:
         """Load saved parameters for the underlying model.

@@ -10,6 +10,7 @@ arch:
   pos_scale: 100
   backward_flow: True
   motion_compensate: False
+  refine: False
 
 optim:
   iters: 2000
