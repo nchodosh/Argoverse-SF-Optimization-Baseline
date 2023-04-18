@@ -74,7 +74,7 @@ class SceneFlow:
         Returns:
             flow: (N,3) tensor of flow predictions.
         """
-        pred = self.graph(self.opt, pcl_0)
+        pred = self.graph(self.opt, pcl_0.to(self.opt.device))
         if self.opt.arch.motion_compensate:
             if self.e1_SE3_e0 is None:
                 raise RuntimeError("Trying to evaluate a model that has not been fit!")
