@@ -78,7 +78,7 @@ class SceneFlow:
             flow: (N,3) tensor of flow predictions.
             is_dynamic (N,) Dynamic segmentation predictions
         """
-        pred = self.fw(self.opt, pcl_0.to(self.opt.device)).detach().cpu()
+        pred = self.flow.fw(self.opt, pcl_0.to(self.opt.device)).detach().cpu()
         if self.opt.arch.refine:
             pred = torch.from_numpy(utils.refine.refine_flow(pcl_0.numpy(), pred.numpy()))
 
