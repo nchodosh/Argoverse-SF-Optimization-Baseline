@@ -112,7 +112,7 @@ class SceneFlow:
         """
         early_stopping = EarlyStopping(patience=self.opt.optim.early_patience, min_delta=0.0001)
         self.flow = Flow(self.opt).to(self.opt.device)
-        
+
         self.e1_SE3_e0 = e1_SE3_e0
         if self.opt.arch.motion_compensate:
             pcl_1 = transform_points(e1_SE3_e0.inverse().matrix(), pcl_1).detach()
@@ -137,7 +137,7 @@ class SceneFlow:
             timer_start(self.flow, "opt_iteration")
             fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_0, pcl_1)
             timer_end(self.flow, "opt_iteration")
-            
+
             if best_loss > loss.detach().item():
                 best_loss = loss.detach().item()
                 best_params = copy.deepcopy(self.flow.state_dict())
@@ -185,10 +185,11 @@ class SceneFlow:
         """
         raise NotImplementedError()
 
+
 class Flow(torch.nn.Module):
     """Flow module."""
-    
-    def __init__(self, opt: SimpleNamespace) -> None
+
+    def __init__(self, opt: SimpleNamespace) -> None:
         """Create a flow module."""
         self.fw = ImplicitFunction(self.opt).to(self.opt.device)
         self.bw = ImplicitFunction(self.opt).to(self.opt.device)
@@ -215,8 +216,8 @@ class Flow(torch.nn.Module):
         bw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred + bw_flow_pred, pcl_0, self.opt.optim.chamfer_radius).mean()
         timer_end(self, "bw_chamf")
         return fw_chamf + bw_chamf
-    
-    
+
+
 class ImplicitFunction(torch.nn.Module):
     """Coordinate Network for representing flow."""
 
