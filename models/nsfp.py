@@ -191,6 +191,7 @@ class Flow(torch.nn.Module):
 
     def __init__(self, opt: SimpleNamespace) -> None:
         """Create a flow module."""
+        self.opt = opt
         self.fw = ImplicitFunction(self.opt).to(self.opt.device)
         self.bw = ImplicitFunction(self.opt).to(self.opt.device)
 
