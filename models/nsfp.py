@@ -15,6 +15,8 @@ from nntime import export_timings, time_this, timer_end, timer_start
 
 import utils.refine
 
+dummy_module = torch.nn.Linear(1, 1)
+
 
 def trunc_nn(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
     """Compute the truncated nearest neighbor distnce from X to Y.
@@ -33,7 +35,6 @@ def trunc_nn(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
     return errs
 
 
-@time_this()
 def trunc_chamfer(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
     """Compute the a symmetric truncated nearest neighbor distnce between X to Y.
 
@@ -64,7 +65,6 @@ class SceneFlow:
         self.opt = opt
         self.e1_SE3_e0: Optional[Se3] = None
 
-    @torch.no_grad()
     def __call__(self, pcl_0: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the model on a a set of points.
 
@@ -111,8 +111,8 @@ class SceneFlow:
                    progresso on thet test metrics.
         """
         early_stopping = EarlyStopping(patience=self.opt.optim.early_patience, min_delta=0.0001)
-        self.fw = ImplicitFunction(self.opt).to(self.opt.device)
-        self.bw = ImplicitFunction(self.opt).to(self.opt.device)
+        self.flow = Flow(self.opt).to(self.opt.device)
+        
         self.e1_SE3_e0 = e1_SE3_e0
         if self.opt.arch.motion_compensate:
             pcl_1 = transform_points(e1_SE3_e0.inverse().matrix(), pcl_1).detach()
@@ -125,10 +125,7 @@ class SceneFlow:
             flow = flow.to(self.opt.device)
 
         optim = torch.optim.Adam(
-            [
-                dict(params=self.fw.parameters(), lr=self.opt.optim.lr, weight_decay=self.opt.optim.weight_decay),
-                dict(params=self.bw.parameters(), lr=self.opt.optim.lr, weight_decay=self.opt.optim.weight_decay),
-            ]
+            [dict(params=self.flow.parameters(), lr=self.opt.optim.lr, weight_decay=self.opt.optim.weight_decay)]
         )
 
         pbar = tqdm.trange(self.opt.optim.iters, desc="optimizing...", dynamic_ncols=True)
@@ -136,12 +133,14 @@ class SceneFlow:
         best_loss = float("inf")
         best_params = self.fw.state_dict()
         for _ in pbar:
-            timer_start(self, "full_iteration")
+            timer_start(self.flow, "full_iteration")
+            timer_start(self.flow, "opt_iteration")
             fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_0, pcl_1)
-
+            timer_end(self.flow, "opt_iteration")
+            
             if best_loss > loss.detach().item():
                 best_loss = loss.detach().item()
-                best_params = copy.deepcopy(self.fw.state_dict())
+                best_params = copy.deepcopy(self.flow.state_dict())
 
             if early_stopping.step(loss):
                 break
@@ -151,37 +150,18 @@ class SceneFlow:
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe: {epe:.3f}")
             else:
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f}")
-            timer_end(self, "full_iteration")
+            timer_end(self.flow, "full_iteration")
 
-        self.fw.load_state_dict(best_params)
+        self.flow.load_state_dict(best_params)
 
-    @time_this()
     def optimization_iteration(self, optim, pcl_0, pcl_1):
-        fw_flow_pred = self.fw(self.opt, pcl_0)
-        bw_flow_pred = self.bw(self.opt, pcl_0 + fw_flow_pred)
+        fw_flow_pred = self.flow.fw(self.opt, pcl_0)
+        bw_flow_pred = self.flow.bw(self.opt, pcl_0 + fw_flow_pred)
         loss = self.compute_loss(fw_flow_pred, bw_flow_pred, pcl_0, pcl_1)
         optim.zero_grad()
         loss.backward()
         optim.step()
         return fw_flow_pred, bw_flow_pred, loss
-
-    def compute_loss(
-        self, fw_flow_pred: torch.Tensor, bw_flow_pred: torch.Tensor, pcl_0: torch.Tensor, pcl_1: torch.Tensor
-    ) -> torch.Tensor:
-        """Compute the optimization loss.
-
-        Args:
-            flow_pred: The predicted flow vectors.
-            flow_pred: The predicted backward flow vectors.
-            pcl_0: First point cloud.
-            pcl_1: Second point cloud.
-
-        Returns:
-            The total loss on the predictions.
-        """
-        fw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred, pcl_1, self.opt.optim.chamfer_radius).mean()
-        bw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred + bw_flow_pred, pcl_0, self.opt.optim.chamfer_radius).mean()
-        return fw_chamf + bw_chamf
 
     def load_parameters(self, filename: Path) -> None:
         """Load saved parameters for the underlying model.
@@ -205,7 +185,38 @@ class SceneFlow:
         """
         raise NotImplementedError()
 
+class Flow(torch.nn.Module):
+    """Flow module."""
+    
+    def __init__(self, opt: SimpleNamespace) -> None
+        """Create a flow module."""
+        self.fw = ImplicitFunction(self.opt).to(self.opt.device)
+        self.bw = ImplicitFunction(self.opt).to(self.opt.device)
 
+    @time_this()
+    def compute_loss(
+        self, fw_flow_pred: torch.Tensor, bw_flow_pred: torch.Tensor, pcl_0: torch.Tensor, pcl_1: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute the optimization loss.
+
+        Args:
+            flow_pred: The predicted flow vectors.
+            flow_pred: The predicted backward flow vectors.
+            pcl_0: First point cloud.
+            pcl_1: Second point cloud.
+
+        Returns:
+            The total loss on the predictions.
+        """
+        timer_start(self, "fw_chamf")
+        fw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred, pcl_1, self.opt.optim.chamfer_radius).mean()
+        timer_end(self, "fw_chamf")
+        timer_start(self, "bw_chamf")
+        bw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred + bw_flow_pred, pcl_0, self.opt.optim.chamfer_radius).mean()
+        timer_end(self, "bw_chamf")
+        return fw_chamf + bw_chamf
+    
+    
 class ImplicitFunction(torch.nn.Module):
     """Coordinate Network for representing flow."""
 

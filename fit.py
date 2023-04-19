@@ -82,7 +82,7 @@ def fit(
         write_output_file(
             pred_flow.detach().cpu().numpy(), is_dynamic.detach().cpu().numpy(), s0.sweep_uuid, output_dir
         )
-    export_timings(model, output_dir / "timing.csv")
+    export_timings(model.flow, output_dir / "timing.csv")
 
 
 if __name__ == "__main__":
