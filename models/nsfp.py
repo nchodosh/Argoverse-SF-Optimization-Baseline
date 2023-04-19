@@ -131,7 +131,7 @@ class SceneFlow:
         pbar = tqdm.trange(self.opt.optim.iters, desc="optimizing...", dynamic_ncols=True)
 
         best_loss = float("inf")
-        best_params = self.fw.state_dict()
+        best_params = self.flow.state_dict()
         for _ in pbar:
             timer_start(self.flow, "full_iteration")
             timer_start(self.flow, "opt_iteration")
