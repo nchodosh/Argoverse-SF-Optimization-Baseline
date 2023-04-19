@@ -3,7 +3,7 @@
 import copy
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 import torch
@@ -11,6 +11,7 @@ import torch_geometric.nn as gnn
 import tqdm
 from kornia.geometry.liegroup import Se3
 from kornia.geometry.linalg import transform_points
+from nntime import export_timings, time_this, timer_end, timer_start
 
 import utils.refine
 
@@ -32,6 +33,7 @@ def trunc_nn(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
     return errs
 
 
+@time_this()
 def trunc_chamfer(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
     """Compute the a symmetric truncated nearest neighbor distnce between X to Y.
 
@@ -63,7 +65,7 @@ class SceneFlow:
         self.e1_SE3_e0: Optional[Se3] = None
 
     @torch.no_grad()
-    def __call__(self, pcl_0: torch.Tensor) -> torch.Tensor:
+    def __call__(self, pcl_0: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the model on a a set of points.
 
         Args:
@@ -74,19 +76,22 @@ class SceneFlow:
 
         Returns:
             flow: (N,3) tensor of flow predictions.
+            is_dynamic (N,) Dynamic segmentation predictions
         """
         pred = self.fw(self.opt, pcl_0.to(self.opt.device)).detach().cpu()
         if self.opt.arch.refine:
             pred = torch.from_numpy(utils.refine.refine_flow(pcl_0.numpy(), pred.numpy()))
-            print("refined")
 
+        rigid_flow = transform_points(self.e1_SE3_e0.matrix(), pcl_0) - pcl_0
         if self.opt.arch.motion_compensate:
             if self.e1_SE3_e0 is None:
                 raise RuntimeError("Trying to evaluate a model that has not been fit!")
-            rigid_flow = transform_points(self.e1_SE3_e0.matrix(), pcl_0) - pcl_0
+            is_dynamic = pred.norm(dim=-1) > 0.05
             pred = pred + rigid_flow
+        else:
+            is_dynamic = (pred - rigid_flow).norm(dim=-1) > 0.05
 
-        return pred
+        return pred, is_dynamic
 
     def fit(
         self,
@@ -131,12 +136,8 @@ class SceneFlow:
         best_loss = float("inf")
         best_params = self.fw.state_dict()
         for _ in pbar:
-            fw_flow_pred = self.fw(self.opt, pcl_0)
-            bw_flow_pred = self.bw(self.opt, pcl_0 + fw_flow_pred)
-            loss = self.compute_loss(fw_flow_pred, bw_flow_pred, pcl_0, pcl_1)
-            optim.zero_grad()
-            loss.backward()
-            optim.step()
+            timer_start(self, "full_iteration")
+            fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_0, pcl_1)
 
             if best_loss > loss.detach().item():
                 best_loss = loss.detach().item()
@@ -150,8 +151,19 @@ class SceneFlow:
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe: {epe:.3f}")
             else:
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f}")
+            timer_end(self, "full_iteration")
 
         self.fw.load_state_dict(best_params)
+
+    @time_this()
+    def optimization_iteration(self, optim, pcl_0, pcl_1):
+        fw_flow_pred = self.fw(self.opt, pcl_0)
+        bw_flow_pred = self.bw(self.opt, pcl_0 + fw_flow_pred)
+        loss = self.compute_loss(fw_flow_pred, bw_flow_pred, pcl_0, pcl_1)
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+        return fw_flow_pred, bw_flow_pred, loss
 
     def compute_loss(
         self, fw_flow_pred: torch.Tensor, bw_flow_pred: torch.Tensor, pcl_0: torch.Tensor, pcl_1: torch.Tensor
@@ -334,7 +346,7 @@ class EarlyStopping(object):
 
         return False
 
-    def _init_is_better(self, mode: str, min_delta: float, percentage: float) -> None:
+    def _init_is_better(self, mode: str, min_delta: float, percentage: bool) -> None:
         """Create the is_better function and save it.
 
         Args:

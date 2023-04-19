@@ -14,6 +14,7 @@ from av2.evaluation.scene_flow.utils import (
     write_output_file,
 )
 from av2.torch.data_loaders.scene_flow import SceneFlowDataloader
+from nntime import export_timings
 from tqdm import tqdm
 
 import models
@@ -77,11 +78,11 @@ def fit(
             flow = flow[mask0]
 
         model.fit(pcl_0, pcl_1, ego1_SE3_ego0, flow)
-        pred_flow = model(pcl_0)
-        is_dynamic = pred_flow.norm(dim=-1) >= 0.05
+        pred_flow, is_dynamic = model(pcl_0)
         write_output_file(
             pred_flow.detach().cpu().numpy(), is_dynamic.detach().cpu().numpy(), s0.sweep_uuid, output_dir
         )
+    export_timings(model, output_dir / "timing.csv")
 
 
 if __name__ == "__main__":
