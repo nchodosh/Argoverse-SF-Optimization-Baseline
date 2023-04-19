@@ -157,7 +157,7 @@ class SceneFlow:
     def optimization_iteration(self, optim, pcl_0, pcl_1):
         fw_flow_pred = self.flow.fw(self.opt, pcl_0)
         bw_flow_pred = self.flow.bw(self.opt, pcl_0 + fw_flow_pred)
-        loss = self.compute_loss(fw_flow_pred, bw_flow_pred, pcl_0, pcl_1)
+        loss = self.flow.compute_loss(fw_flow_pred, bw_flow_pred, pcl_0, pcl_1)
         optim.zero_grad()
         loss.backward()
         optim.step()
