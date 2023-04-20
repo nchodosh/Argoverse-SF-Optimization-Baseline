@@ -1,6 +1,6 @@
 cfg_name: nsfp
 device: cuda
-
+timing: false
 
 arch:
   filter_size: 128

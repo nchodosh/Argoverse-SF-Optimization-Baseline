@@ -11,7 +11,7 @@ import torch_geometric.nn as gnn
 import tqdm
 from kornia.geometry.liegroup import Se3
 from kornia.geometry.linalg import transform_points
-from nntime import export_timings, time_this, timer_end, timer_start
+from nntime import export_timings, time_this, timer_end, timer_start, set_global_sync
 from pytorch3d.ops import knn_points
 
 import utils.refine
@@ -64,6 +64,10 @@ class SceneFlow:
         """
         self.opt = opt
         self.e1_SE3_e0: Optional[Se3] = None
+        if opt.timing:
+            set_global_sync(True)
+        else:
+            set_global_sync(False)
 
     def __call__(self, pcl_0: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the model on a a set of points.
@@ -136,7 +140,7 @@ class SceneFlow:
             timer_start(self.flow, "full_iteration")
             timer_start(self.flow, "opt_iteration")
             fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_0, pcl_1)
-            timer_end(self.flow, "opt_iteration")
+            timer_end(self.flow, "opt_iteration"21)
 
             if best_loss > loss.detach().item():
                 best_loss = loss.detach().item()
