@@ -199,6 +199,7 @@ class Flow(torch.nn.Module):
         self.opt = opt
         self.fw = ImplicitFunction(self.opt).to(self.opt.device)
         self.bw = ImplicitFunction(self.opt).to(self.opt.device)
+        self.bw.load_state_dict(self.fw.state_dict())
 
     @time_this()
     def compute_loss(
@@ -219,7 +220,7 @@ class Flow(torch.nn.Module):
         fw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred, pcl_1, self.opt.optim.chamfer_radius).mean()
         timer_end(self, "fw_chamf")
         timer_start(self, "bw_chamf")
-        bw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred + bw_flow_pred, pcl_0, self.opt.optim.chamfer_radius).mean()
+        bw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred - bw_flow_pred, pcl_0, self.opt.optim.chamfer_radius).mean()
         timer_end(self, "bw_chamf")
         return fw_chamf + bw_chamf
 
