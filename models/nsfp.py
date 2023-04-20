@@ -12,6 +12,7 @@ import tqdm
 from kornia.geometry.liegroup import Se3
 from kornia.geometry.linalg import transform_points
 from nntime import export_timings, time_this, timer_end, timer_start
+from pytorch3d.ops import knn_points
 
 import utils.refine
 
@@ -29,10 +30,9 @@ def trunc_nn(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
     Returns:
         (N,) tensor containing min(r, min_{y} ||x - y||).
     """
-    assigned = gnn.nearest(X, Y)
-    errs = ((X - Y[assigned]) ** 2).sum(-1)
-    errs = torch.clamp(errs, 0, r)
-    return errs
+    dists = knn_points(X[None], Y[None], K=1).dists[0]
+    dists_trunc: torch.Tensor = torch.clamp(dists, 0, r)
+    return dists_trunc
 
 
 def trunc_chamfer(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
