@@ -217,7 +217,7 @@ class Flow(torch.nn.Module):
         Returns:
             The total loss on the predictions.
         """
-        l = lambda x, y: loss.my_chamfer_fn(x[None], y[None])
+        l = lambda x, y: trunc_chamfer(x, y)
         timer_start(self, "fw_chamf")
         fw_chamf, _ = l(pcl_0 + fw_flow_pred, pcl_1)
         timer_end(self, "fw_chamf")
