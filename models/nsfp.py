@@ -218,13 +218,13 @@ class Flow(torch.nn.Module):
             The total loss on the predictions.
         """
         timer_start(self, "fw_chamf")
-        fw_chamf = loss.my_chamfer_fn(
+        fw_chamf, _ = loss.my_chamfer_fn(
             (pcl_0 + fw_flow_pred).unsqueeze(0),
             pcl_1.unsqueeze(0),
         )
         timer_end(self, "fw_chamf")
         timer_start(self, "bw_chamf")
-        bw_chamf = loss.my_chamfer_fn((pcl_0 + fw_flow_pred - bw_flow_pred).unsqueeze(0), pcl_0.unsqueeze(0))
+        bw_chamf, _ = loss.my_chamfer_fn((pcl_0 + fw_flow_pred - bw_flow_pred).unsqueeze(0), pcl_0.unsqueeze(0))
         timer_end(self, "bw_chamf")
         return fw_chamf + bw_chamf
 
