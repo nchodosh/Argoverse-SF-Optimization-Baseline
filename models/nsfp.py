@@ -220,7 +220,7 @@ class Flow(torch.nn.Module):
         timer_start(self, "fw_chamf")
         fw_chamf = loss.my_chamfer_fn(
             (pcl_0 + fw_flow_pred).unsqueeze(0),
-            pcl_1.unsqueze(0),
+            pcl_1.unsqueeze(0),
         )
         timer_end(self, "fw_chamf")
         timer_start(self, "bw_chamf")
