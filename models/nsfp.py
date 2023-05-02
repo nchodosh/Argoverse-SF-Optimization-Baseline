@@ -219,10 +219,10 @@ class Flow(torch.nn.Module):
         """
         l = lambda x, y: trunc_chamfer(x, y, 2)
         timer_start(self, "fw_chamf")
-        fw_chamf, _ = l(pcl_0 + fw_flow_pred, pcl_1)
+        fw_chamf = l(pcl_0 + fw_flow_pred, pcl_1)
         timer_end(self, "fw_chamf")
         timer_start(self, "bw_chamf")
-        bw_chamf, _ = l(pcl_0 + fw_flow_pred - bw_flow_pred, pcl_0)
+        bw_chamf = l(pcl_0 + fw_flow_pred - bw_flow_pred, pcl_0)
         timer_end(self, "bw_chamf")
         return fw_chamf + bw_chamf
 
