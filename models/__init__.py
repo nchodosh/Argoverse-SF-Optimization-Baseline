@@ -1,3 +1,3 @@
 """Scene Flow models."""
 
-__all__ = ["nsfp"]
+__all__ = ["nsfp", "icp"]

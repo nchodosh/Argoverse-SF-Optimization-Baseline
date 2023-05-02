@@ -1,0 +1,3 @@
+cfg_name: icp
+device: cpu
+timing: false

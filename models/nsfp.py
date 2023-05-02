@@ -14,6 +14,7 @@ from kornia.geometry.linalg import transform_points
 from nntime import export_timings, set_global_sync, time_this, timer_end, timer_start
 from pytorch3d.ops import knn_points
 
+import loss
 import utils.refine
 
 dummy_module = torch.nn.Linear(1, 1)
@@ -217,10 +218,13 @@ class Flow(torch.nn.Module):
             The total loss on the predictions.
         """
         timer_start(self, "fw_chamf")
-        fw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred, pcl_1, self.opt.optim.chamfer_radius).mean()
+        fw_chamf = loss.my_chamfer_fn(
+            pcl_0 + fw_flow_pred,
+            pcl_1,
+        )
         timer_end(self, "fw_chamf")
         timer_start(self, "bw_chamf")
-        bw_chamf = trunc_chamfer(pcl_0 + fw_flow_pred - bw_flow_pred, pcl_0, self.opt.optim.chamfer_radius).mean()
+        bw_chamf = loss.my_chamfer_fn(pcl_0 + fw_flow_pred - bw_flow_pred, pcl_0)
         timer_end(self, "bw_chamf")
         return fw_chamf + bw_chamf
 
