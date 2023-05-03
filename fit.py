@@ -110,7 +110,9 @@ if __name__ == "__main__":
 
         data_loader = data.argoverse2.Dataloader(data_root=args.inputs, split=args.split, mask_file=args.mask_file)
     elif args.dataset == "nuscenes":
-        raise NotImplementedError("No nuscenes yet")
+        import data.nuscenes
+
+        data_laoder = data.nuscenes.Dataloader(data_root=args.inputs)
 
     fit(
         args.name,
