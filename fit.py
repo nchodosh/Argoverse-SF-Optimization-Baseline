@@ -108,7 +108,7 @@ if __name__ == "__main__":
     if args.dataset == "argoverse2":
         import data.argoverse2
 
-        data_loader = data.argoverse2.Dataloader(args.data_root, args.split, args.mask_file)
+        data_loader = data.argoverse2.Dataloader(args.inputs, args.split, args.mask_file)
     elif args.dataset == "nuscenes":
         raise NotImplementedError("No nuscenes yet")
 
