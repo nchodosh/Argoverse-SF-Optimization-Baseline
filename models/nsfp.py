@@ -7,7 +7,6 @@ from typing import Callable, Optional, Tuple
 
 import numpy as np
 import torch
-import torch_geometric.nn as gnn
 import tqdm
 from kornia.geometry.liegroup import Se3
 from kornia.geometry.linalg import transform_points
