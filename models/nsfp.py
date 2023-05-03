@@ -13,40 +13,10 @@ from kornia.geometry.linalg import transform_points
 from nntime import export_timings, set_global_sync, time_this, timer_end, timer_start
 from pytorch3d.ops import knn_points
 
-import loss
+import losses
 import utils.refine
 
 dummy_module = torch.nn.Linear(1, 1)
-
-
-def trunc_nn(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
-    """Compute the truncated nearest neighbor distnce from X to Y.
-
-    Args:
-        X: (N, D) tensor of points.
-        Y: (M, D) tensor of points.
-        r: The maximum nearest neighbor distance.
-
-    Returns:
-        (N,) tensor containing min(r, min_{y} ||x - y||).
-    """
-    dists = knn_points(X[None], Y[None], K=1).dists[0]
-    dists_trunc: torch.Tensor = torch.clamp(dists, 0, r)
-    return dists_trunc
-
-
-def trunc_chamfer(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
-    """Compute the a symmetric truncated nearest neighbor distnce between X to Y.
-
-    Args:
-        X: (N, D) tensor of points.
-        Y: (M, D) tensor of points.
-        r: The maximum nearest neighbor distance.
-
-    Returns:
-        (N,) tensor containing trunc_nn(X, Y, r) concatenate with trunc_nn(Y, X, r).
-    """
-    return torch.cat([trunc_nn(X, Y, r), trunc_nn(Y, X, r)], dim=0)
 
 
 class SceneFlow:
@@ -182,12 +152,10 @@ class SceneFlow:
         """Save parameters for the underlying model.
 
         Args:
-            filename: Path to svae the parameters to.
-
-        Raises:
-            NotImplementedError: If the subclass has not implemented this.
+            filename: Path to save the parameters to. Suffix will be automatically converted to .pt
         """
-        raise NotImplementedError()
+        filename = filename.with_suffix(".pt")
+        torch.save({"ckpt": self.flow.state_dict()}, filename)
 
 
 class Flow(torch.nn.Module):
@@ -216,7 +184,7 @@ class Flow(torch.nn.Module):
         Returns:
             The total loss on the predictions.
         """
-        l = lambda x, y: trunc_chamfer(x, y, 2).mean()
+        l = lambda x, y: losses.trunc_chamfer(x, y, 2).mean()
         timer_start(self, "fw_chamf")
         fw_chamf = l(pcl_0 + fw_flow_pred, pcl_1)
         timer_end(self, "fw_chamf")

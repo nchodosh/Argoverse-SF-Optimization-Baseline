@@ -8,27 +8,21 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from av2.evaluation.scene_flow.utils import (
-    get_eval_point_mask,
-    get_eval_subset,
-    write_output_file,
-)
-from av2.torch.data_loaders.scene_flow import SceneFlowDataloader
 from nntime import export_timings
+from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import models
 import models.base
 from utils import options
+from utils.torch import move_to_device
 
 
 def fit(
     name: str,
     model: models.base.SceneFlow,
-    data_root: str = "inputs",
-    split: str = "val",
+    data_loader: Dataset,
     output_root: str = "outputs",
-    mask_file: str = "val-masks.zip",
     subset_size: int = 0,
     chunk: Tuple[int, int] = (1, 1),
 ) -> None:
@@ -37,11 +31,8 @@ def fit(
     Args:
         name: Name of the model to save output under.
         model: The scene flow class to fit parameters with.
-        data_root: Root directory containing dataset
-                   (e.g. <data_root>/av2/sensor/val).
-        split: Split to generate perdictions for (test, train or val),
+        data_loader: Loader for the data
         output_root: Root directory to save output files in,
-        mask_file: Path to the appropriate mask file for choosing input points.
         subset_size: Fit a random subset of the examples for faster testing.
                      If 0 use the whole dataset. Always uses seed 0 and random.shuffle to
                      get a consistent but arbitrarty ordering.
@@ -53,8 +44,7 @@ def fit(
     output_dir.mkdir(exist_ok=True, parents=True)
     options.save_options_file(model.opt, output_dir / "options.yaml")
 
-    data_loader = SceneFlowDataloader(data_root, "av2", split)
-    inds = get_eval_subset(data_loader)
+    inds = np.arange(len(data_loader))
     if subset_size > 0:
         seed(0)
         shuffle(inds)
@@ -62,26 +52,18 @@ def fit(
     inds = np.array_split(inds, chunk[0])[chunk[1] - 1]
 
     for i in tqdm(inds):
-        s0, s1, ego1_SE3_ego0, flow_obj = data_loader[i]
-        pcl_0 = s0.lidar.as_tensor()[:, :3]
-        pcl_1 = s1.lidar.as_tensor()[:, :3]
-        flow = flow_obj.flow if flow_obj is not None else None
-        mask0 = get_eval_point_mask(s0.sweep_uuid, Path(mask_file))
-        mask1 = torch.logical_and(
-            torch.logical_and((pcl_1[:, 0].abs() <= 50), (pcl_1[:, 1].abs() <= 50)).bool(),
-            torch.logical_not(s1.is_ground),
-        )
+        datapoint = data_loader[i]
 
-        pcl_1 = pcl_1[mask1]
-        pcl_0 = pcl_0[mask0]
-        if flow is not None:
-            flow = flow[mask0]
+        pcl_0, pcl_1, ego1_SE3_ego0, flow = (
+            datapoint["pcl_0"],
+            datapoint["pcl_1"],
+            datapoint["ego1_SE3_ego0"],
+            datapoint["flow"],
+        )
 
         model.fit(pcl_0, pcl_1, ego1_SE3_ego0, flow)
         pred_flow, is_dynamic = model(pcl_0)
-        write_output_file(
-            pred_flow.detach().cpu().numpy(), is_dynamic.detach().cpu().numpy(), s0.sweep_uuid, output_dir
-        )
+        model.save_parameters(output_dir / data_loader.example_id(i))
     export_timings(model.flow, output_dir / "timing.csv")
 
 
@@ -96,6 +78,7 @@ if __name__ == "__main__":
         type=str,
         help="override model configuration with opt.subopt.key=val",
     )
+    parser.add_argument("--dataset", type=str, default="argoverse2", choices=["argoverse2", "nuscenes"])
     parser.add_argument("--outputs", type=str, default="outputs", help="place to store outputs")
     parser.add_argument(
         "--inputs",
@@ -122,12 +105,17 @@ if __name__ == "__main__":
     m = importlib.import_module(f"models.{model_cfg.cfg_name}")
     model = m.SceneFlow(model_cfg)
 
+    if args.dataset == "argoverse2":
+        import data.argoverse2
+
+        data_loader = data.argoverse2.Dataloader(args.data_root, args.split, args.mask_file)
+    elif args.dataset == "nuscenes":
+        raise NotImplementedError("No nuscenes yet")
+
     fit(
         args.name,
         model,
-        split=args.split,
-        data_root=args.inputs,
-        output_root=args.outputs,
+        data_loader,
         subset_size=args.subset,
         chunk=(args.chunks, args.chunk_number),
     )

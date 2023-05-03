@@ -8,6 +8,36 @@ from pytorch3d.ops.knn import knn_gather, knn_points
 from pytorch3d.structures.pointclouds import Pointclouds
 
 
+def trunc_nn(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
+    """Compute the truncated nearest neighbor distnce from X to Y.
+
+    Args:
+        X: (N, D) tensor of points.
+        Y: (M, D) tensor of points.
+        r: The maximum nearest neighbor distance.
+
+    Returns:
+        (N,) tensor containing min(r, min_{y} ||x - y||).
+    """
+    dists = knn_points(X[None], Y[None], K=1).dists[0]
+    dists_trunc: torch.Tensor = torch.clamp(dists, 0, r)
+    return dists_trunc
+
+
+def trunc_chamfer(X: torch.Tensor, Y: torch.Tensor, r: float) -> torch.Tensor:
+    """Compute the a symmetric truncated nearest neighbor distnce between X to Y.
+
+    Args:
+        X: (N, D) tensor of points.
+        Y: (M, D) tensor of points.
+        r: The maximum nearest neighbor distance.
+
+    Returns:
+        (N,) tensor containing trunc_nn(X, Y, r) concatenate with trunc_nn(Y, X, r).
+    """
+    return torch.cat([trunc_nn(X, Y, r), trunc_nn(Y, X, r)], dim=0)
+
+
 def _validate_chamfer_reduction_inputs(batch_reduction: Union[str, None], point_reduction: str):
     """Check the requested reductions are valid.
 
