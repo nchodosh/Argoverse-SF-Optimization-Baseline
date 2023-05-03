@@ -40,8 +40,8 @@ class Dataloader(Dataset):
 
         annotations = ex.annotation_labels[m1]
 
-        R = So3.from_matrix(ex.odom_t0_t1[:3, :3].clone()[None])
-        t = ex.odom_t0_t1[:3, 3][None]
+        R = So3.from_matrix(ex.odom_t0_t1[:3, :3].clone()[None].float())
+        t = ex.odom_t0_t1[:3, 3][None].float()
         ego1_SE3_ego0 = Se3(R, t)
 
         return {
