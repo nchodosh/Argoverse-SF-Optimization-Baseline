@@ -2,7 +2,7 @@ import pickle
 from pathlib import Path
 
 import numpy as np
-from kornia.geometry.liegroup import Se3
+from kornia.geometry.liegroup import Se3, So3
 from torch.utils.data import Dataset
 
 from utils import dotdict, geometry
@@ -40,7 +40,9 @@ class Dataloader(Dataset):
 
         annotations = ex.annotation_labels[m1]
 
-        ego1_SE3_ego0 = Se3(ex.odom_t0_t1[:3, :3], ex.odom_t0_t1[:3, 3])
+        R = So3.from_matrix(ex.odom_t0_t1[:3, :3])
+        t = ex.odom_t0_t1[:3, 3]
+        ego1_SE3_ego0 = Se3(R, t)
 
         return {
             "pcl_0": pcl_1,
