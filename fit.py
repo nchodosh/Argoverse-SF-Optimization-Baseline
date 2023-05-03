@@ -3,7 +3,7 @@
 import argparse
 import importlib
 from pathlib import Path
-from random import seed, shuffle
+from random import sample, seed
 from typing import Tuple
 
 import numpy as np
@@ -47,8 +47,7 @@ def fit(
     inds = np.arange(len(data_loader))
     if subset_size > 0:
         seed(0)
-        shuffle(inds)
-        inds = inds[:subset_size]
+        inds = sample(inds, subset_size)
     inds = np.array_split(inds, chunk[0])[chunk[1] - 1]
 
     for i in tqdm(inds):
