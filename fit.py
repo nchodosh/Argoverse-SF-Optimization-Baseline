@@ -87,7 +87,7 @@ if __name__ == "__main__":
         help="place to find inputs, looks for <inputs>/av2/sensor/<split>",
     )
     parser.add_argument("--split", default="val", choices=["val", "test"])
-    parser.add_argument("--mask-file", type=str, help="mask archive file location")
+    parser.add_argument("--mask-file", type=str, default="val-masks.zip", help="mask archive file location")
     parser.add_argument(
         "--chunks",
         type=int,
