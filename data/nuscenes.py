@@ -23,7 +23,7 @@ class Dataloader(Dataset):
         not_ground1 = ex["pcl_t0"][:, 2] > 0.3
         not_ground2 = ex["pcl_t1"][:, 2] > 0.3
 
-        pcl_1 = geometry.ego_to_sensor(ex["pcl_t0"][:, :3], ex.sensor)
+        pcl_1 = geometry.ego_to_sensor(ex["pcl_t0"][:, :3], ex["sensor"])
         flow = geometry.ego_to_sensor(ex["pcl_t0"][:, :3] + ex["flow_t0_t1"], ex["sensor"]) - geometry.ego_to_sensor(
             ex["pcl_t0[:, :3]"], ex["sensor"]
         )
