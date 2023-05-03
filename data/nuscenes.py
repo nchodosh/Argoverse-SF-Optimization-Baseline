@@ -2,7 +2,7 @@ import pickle
 from pathlib import Path
 
 import numpy as np
-from kornia.geoemtry.liegroup import SE3
+from kornia.geometry.liegroup import SE3
 
 from utils import geometry
 from utils.torch import numpy_to_torch
