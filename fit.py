@@ -112,7 +112,7 @@ if __name__ == "__main__":
     elif args.dataset == "nuscenes":
         import data.nuscenes
 
-        data_laoder = data.nuscenes.Dataloader(data_root=args.inputs)
+        data_loader = data.nuscenes.Dataloader(data_root=args.inputs)
 
     fit(
         args.name,
