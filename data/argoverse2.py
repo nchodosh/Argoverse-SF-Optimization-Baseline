@@ -14,7 +14,7 @@ class Dataloader(Dataset):
     def __init__(self, data_root="inputs", split="val", mask_file="val-mask.zip"):
         self.data_loader = SceneFlowDataloader(data_root, "av2", split)
         self.inds = get_eval_subset(self.data_loader)
-        self.mask_file = mask_file
+        self.mask_file = Path(mask_file)
 
     def __len__(self):
         return len(self.inds)
@@ -24,7 +24,7 @@ class Dataloader(Dataset):
         pcl_0 = s0.lidar.as_tensor()[:, :3]
         pcl_1 = s1.lidar.as_tensor()[:, :3]
         flow = flow_obj.flow if flow_obj is not None else None
-        mask0 = get_eval_point_mask(s0.sweep_uuid, Path(self.mask_file))
+        mask0 = get_eval_point_mask(s0.sweep_uuid, self.mask_file)
         mask1 = torch.logical_and(
             torch.logical_and((pcl_1[:, 0].abs() <= 50), (pcl_1[:, 1].abs() <= 50)).bool(),
             torch.logical_not(s1.is_ground),
