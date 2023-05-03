@@ -44,7 +44,7 @@ def fit(
     output_dir.mkdir(exist_ok=True, parents=True)
     options.save_options_file(model.opt, output_dir / "options.yaml")
 
-    inds = np.arange(len(data_loader))
+    inds = list(range(len(data_loader)))
     if subset_size > 0:
         seed(0)
         inds = sample(inds, subset_size)
