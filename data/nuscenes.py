@@ -11,7 +11,7 @@ from utils.torch import numpy_to_torch
 
 class Dataloader(Dataset):
     def __init__(self, data_root="inputs"):
-        self.files = list(Path(data_root).rglob("*.pkl"))
+        self.files = list((Path(data_root) / "nuscenes").rglob("*.pkl"))
 
     def __len__(self):
         return len(self.files)
