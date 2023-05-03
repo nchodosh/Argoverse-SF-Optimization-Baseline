@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 from kornia.geometry.liegroup import Se3
+from torch.utils.data import Dataset
 
 from utils import geometry
 from utils.torch import numpy_to_torch
