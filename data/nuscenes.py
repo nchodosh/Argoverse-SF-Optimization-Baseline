@@ -45,9 +45,9 @@ class Dataloader(Dataset):
         ego1_SE3_ego0 = Se3(R, t)
 
         return {
-            "pcl_0": pcl_1,
-            "pcl_1": pcl_2,
-            "flow": flow,
+            "pcl_0": pcl_1.float(),
+            "pcl_1": pcl_2.float(),
+            "flow": flow.float(),
             "ego1_SE3_ego0": ego1_SE3_ego0,
             "annotations": annotations,
         }
