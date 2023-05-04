@@ -188,7 +188,7 @@ class Flow(torch.nn.Module):
         self.bw.load_state_dict(self.fw.state_dict())
 
     def load_sheet(self, sheet, example_file):
-        result_file = (Path(self.opt.loss.models_root) / example_file).with_suffix(sheet.parameters_suffix)
+        result_file = (Path(self.opt.optim.loss.models_root) / example_file).with_suffix(sheet.parameters_suffix)
         self.sheet = sheet
         self.sheet.load_parameters(result_file)
 
@@ -207,7 +207,7 @@ class Flow(torch.nn.Module):
         Returns:
             The total loss on the predictions.
         """
-        if self.opt.loss.type == "chamfer":
+        if self.opt.optim.loss.type == "chamfer":
             l = lambda x, y: losses.trunc_chamfer(x, y, 2).mean()
             timer_start(self, "fw_chamf")
             fw_chamf = l(pcl_0 + fw_flow_pred, pcl_1)
@@ -216,7 +216,7 @@ class Flow(torch.nn.Module):
             bw_chamf = l(pcl_0 + fw_flow_pred - bw_flow_pred, pcl_0)
             timer_end(self, "bw_chamf")
             return fw_chamf + bw_chamf
-        elif self.opt.loss.type == "sheet":
+        elif self.opt.optim.loss.type == "sheet":
             return sheet_loss(self.sheet, pcl_0 + fw_flow_pred).float().mean()
 
 
