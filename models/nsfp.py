@@ -70,7 +70,11 @@ class SceneFlow:
             flow: (N,3) tensor of flow predictions.
             is_dynamic (N,) Dynamic segmentation predictions
         """
-        pred = self.flow.fw(self.opt, pcl_0.to(self.opt.device)).detach().cpu()
+        if self.opt.arch.motion_compensate:
+            pcl_input = transform_points(self.e1_SE3_e0.matrix(), pcl_0)
+        else:
+            pcl_input = pcl_0
+        pred = self.flow.fw(self.opt, pcl_input.to(self.opt.device)).detach().cpu()
         if self.opt.arch.refine:
             pred = torch.from_numpy(utils.refine.refine_flow(pcl_0.numpy(), pred.numpy()))
 
@@ -108,11 +112,13 @@ class SceneFlow:
 
         self.e1_SE3_e0 = e1_SE3_e0
         if self.opt.arch.motion_compensate:
-            pcl_1 = transform_points(e1_SE3_e0.inverse().matrix(), pcl_1).detach()
+            pcl_input = transform_points(e1_SE3_e0.matrix(), pcl_0).detach()
             rigid_flow = (transform_points(self.e1_SE3_e0.matrix(), pcl_0) - pcl_0).detach()
             flow = flow - rigid_flow
+        else:
+            pcl_input = pcl_0
 
-        pcl_0 = pcl_0.to(self.opt.device)
+        pcl_input = pcl_input.to(self.opt.device)
         pcl_1 = pcl_1.to(self.opt.device)
         if flow is not None:
             flow = flow.to(self.opt.device)
