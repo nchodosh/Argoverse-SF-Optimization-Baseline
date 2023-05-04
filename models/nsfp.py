@@ -20,7 +20,7 @@ import utils.refine
 dummy_module = torch.nn.Linear(1, 1)
 
 
-def inlier_loss(x, k=0.1):
+def inlier_loss(x, k=0.2):
     return 1 / (1 + torch.exp(-x.abs() / k)) - 1 / 2
 
 

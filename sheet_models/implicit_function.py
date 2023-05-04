@@ -81,7 +81,7 @@ class Graph(torch.nn.Module):
         shape = input.shape
         N = shape[-1]
         enc = []
-        for i in range(N):
+xo        for i in range(N):
             freq = (
                 2 ** torch.arange(self.L[i], dtype=torch.float32, device=input.device) * np.pi / self.opt.pos.scale
             )  # [L]
