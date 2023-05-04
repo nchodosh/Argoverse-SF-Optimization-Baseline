@@ -147,6 +147,7 @@ class SceneFlow:
 
             if early_stopping.step(loss):
                 self.flow.load_state_dict(best_params)
+                fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_input, pcl_1)
                 epe = (fw_flow_pred - flow).norm(dim=-1).mean().detach().item()
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe: {epe:.3f}")
                 break
