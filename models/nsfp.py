@@ -52,7 +52,7 @@ class SceneFlow:
         else:
             set_global_sync(False)
 
-        if opt.optim.loss == "sheet":
+        if opt.optim.loss.type == "sheet":
             import sheet_models.base
 
             self.sheet, self.sheet_cfg = sheet_models.base.load(Path(opt.optim.loss.models_root).parent)
