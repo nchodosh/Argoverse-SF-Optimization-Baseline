@@ -55,7 +55,7 @@ class SceneFlow:
         if opt.optim.loss == "sheet":
             import sheet_models.base
 
-            self.sheet, self.sheet_cfg = sheet_models.base.load(opt.optim.loss.models_root)
+            self.sheet, self.sheet_cfg = sheet_models.base.load(Path(opt.optim.loss.models_root).parent)
 
     def __call__(self, pcl_0: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the model on a a set of points.
