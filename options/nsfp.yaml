@@ -18,4 +18,7 @@ optim:
   lr: 0.004
   chamfer_radius: 2
   weight_decay: 0.0001
+  loss:
+    type: chamfer
+    models_root: 
   

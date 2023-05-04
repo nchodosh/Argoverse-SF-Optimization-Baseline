@@ -14,9 +14,22 @@ from nntime import export_timings, set_global_sync, time_this, timer_end, timer_
 from pytorch3d.ops import knn_points
 
 import losses
+import utils
 import utils.refine
 
 dummy_module = torch.nn.Linear(1, 1)
+
+
+def inlier_loss(x, k=0.1):
+    return 1 / (1 + torch.exp(-x.abs() / k)) - 1 / 2
+
+
+def sheet_loss(model, xyz):
+    ryp = utils.geometry.ryp(xyz)
+    sheet_depth = model.depth(ryp[:, 1:]).squeeze()
+    err = (sheet_depth - ryp[:, 0].to(sheet_depth.device)).abs()
+    trunc_err = inlier_loss(err)
+    return trunc_err
 
 
 class SceneFlow:
@@ -38,6 +51,11 @@ class SceneFlow:
             set_global_sync(True)
         else:
             set_global_sync(False)
+
+        if opt.optim.loss == "sheet":
+            import sheet_models.base
+
+            self.sheet, self.sheet_cfg = sheet_models.base.load(opt.optim.loss.models_root)
 
     def __call__(self, pcl_0: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the model on a a set of points.
@@ -169,6 +187,11 @@ class Flow(torch.nn.Module):
         self.bw = ImplicitFunction(self.opt).to(self.opt.device)
         self.bw.load_state_dict(self.fw.state_dict())
 
+    def load_sheet(self, sheet, example_file):
+        result_file = (Path(self.opt.loss.models_root) / example_file).with_suffix(sheet.parameters_suffix)
+        self.sheet = sheet
+        self.sheet.load_parameters(result_file)
+
     @time_this()
     def compute_loss(
         self, fw_flow_pred: torch.Tensor, bw_flow_pred: torch.Tensor, pcl_0: torch.Tensor, pcl_1: torch.Tensor
@@ -184,14 +207,17 @@ class Flow(torch.nn.Module):
         Returns:
             The total loss on the predictions.
         """
-        l = lambda x, y: losses.trunc_chamfer(x, y, 2).mean()
-        timer_start(self, "fw_chamf")
-        fw_chamf = l(pcl_0 + fw_flow_pred, pcl_1)
-        timer_end(self, "fw_chamf")
-        timer_start(self, "bw_chamf")
-        bw_chamf = l(pcl_0 + fw_flow_pred - bw_flow_pred, pcl_0)
-        timer_end(self, "bw_chamf")
-        return fw_chamf + bw_chamf
+        if self.opt.loss.type == "chamfer":
+            l = lambda x, y: losses.trunc_chamfer(x, y, 2).mean()
+            timer_start(self, "fw_chamf")
+            fw_chamf = l(pcl_0 + fw_flow_pred, pcl_1)
+            timer_end(self, "fw_chamf")
+            timer_start(self, "bw_chamf")
+            bw_chamf = l(pcl_0 + fw_flow_pred - bw_flow_pred, pcl_0)
+            timer_end(self, "bw_chamf")
+            return fw_chamf + bw_chamf
+        elif self.opt.loss.type == "sheet":
+            return sheet_loss(self.sheet, pcl_0 + fw_flow_pred).float().mean()
 
 
 class ImplicitFunction(torch.nn.Module):
