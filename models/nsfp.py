@@ -138,7 +138,7 @@ class SceneFlow:
         for _ in pbar:
             timer_start(self.flow, "full_iteration")
             timer_start(self.flow, "opt_iteration")
-            fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_0, pcl_1)
+            fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_input, pcl_1)
             timer_end(self.flow, "opt_iteration")
 
             if best_loss > loss.detach().item():
