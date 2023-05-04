@@ -146,6 +146,9 @@ class SceneFlow:
                 best_params = copy.deepcopy(self.flow.state_dict())
 
             if early_stopping.step(loss):
+                self.flow.load_state_dict(best_params)
+                epe = (fw_flow_pred - flow).norm(dim=-1).mean().detach().item()
+                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe: {epe:.3f}")
                 break
 
             if flow is not None:
