@@ -91,6 +91,7 @@ class SceneFlow:
         pcl_1: torch.Tensor,
         e1_SE3_e0: Se3,
         flow: Optional[torch.Tensor] = None,
+        example_name: Optional[Path] = None,
     ) -> None:
         """Fit the model parameters on a a set of points.
 
@@ -124,6 +125,10 @@ class SceneFlow:
 
         best_loss = float("inf")
         best_params = self.flow.state_dict()
+
+        if self.opt.optim.loss.type == "sheet":
+            self.flow.load_sheet(self.sheet, example_name)
+
         for _ in pbar:
             timer_start(self.flow, "full_iteration")
             timer_start(self.flow, "opt_iteration")
@@ -187,8 +192,8 @@ class Flow(torch.nn.Module):
         self.bw = ImplicitFunction(self.opt).to(self.opt.device)
         self.bw.load_state_dict(self.fw.state_dict())
 
-    def load_sheet(self, sheet, example_file):
-        result_file = (Path(self.opt.optim.loss.models_root) / example_file).with_suffix(sheet.parameters_suffix)
+    def load_sheet(self, sheet, example_name):
+        result_file = (Path(self.opt.optim.loss.models_root) / example_name).with_suffix(sheet.parameters_suffix)
         self.sheet = sheet
         self.sheet.load_parameters(result_file)
 

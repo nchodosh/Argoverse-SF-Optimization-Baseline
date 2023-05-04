@@ -60,9 +60,10 @@ def fit(
             datapoint["flow"],
         )
 
-        model.fit(pcl_0, pcl_1, ego1_SE3_ego0, flow)
+        example_name = data_loader.example_id(i)
+        model.fit(pcl_0, pcl_1, ego1_SE3_ego0, flow, example_name=example_name)
         pred_flow, is_dynamic = model(pcl_0)
-        model.save_parameters(output_dir / data_loader.example_id(i))
+        model.save_parameters(output_dir / example_name)
     export_timings(model.flow, output_dir / "timing.csv")
 
 
