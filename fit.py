@@ -94,16 +94,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    output_dir = Path(args.outputs) / args.name
-    output_dir.mkdir(exist_ok=True, parents=True)
+    output_root = Path(args.outputs) / args.name
+    output_root.mkdir(exist_ok=True, parents=True)
 
     cli_args = options.parse_arguments([args.model] + args.model_args)
     model_cfg = options.set(cli_args)
 
     m = importlib.import_module(f"models.{model_cfg.cfg_name}")
-    model = m.SceneFlow(model_cfg, output_dir=output_dir)
+    model = m.SceneFlow(model_cfg, output_root=output_root)
 
-    options.save_options_file(model.opt, output_dir / "options.yaml")
+    options.save_options_file(model.opt, output_root / "options.yaml")
 
     if args.dataset == "argoverse2":
         import data.argoverse2
@@ -119,5 +119,5 @@ if __name__ == "__main__":
         data_loader,
         subset_size=args.subset,
         chunk=(args.chunks, args.chunk_number),
-        output_root=output_dir,
+        output_root=output_root,
     )

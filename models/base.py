@@ -24,7 +24,7 @@ class SceneFlow:
         """
         self.opt = opt
         self.parameters_glob = "*.pkl"
-        self.output_root = output.root
+        self.output_root = output_root
 
     def __call__(self, pcl_0: torch.Tensor) -> torch.Tensor:
         """Evaluate the model on a a set of points.
