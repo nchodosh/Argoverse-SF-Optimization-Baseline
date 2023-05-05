@@ -15,14 +15,16 @@ class SceneFlow:
         opt: A namespace conftaining the model configuration.
     """
 
-    def __init__(self, opt: SimpleNamespace) -> None:
+    def __init__(self, opt: SimpleNamespace, output_root: Path) -> None:
         """Create a scene flow model based on the configuration in opt.
 
         Args:
             opt: A nested namespace specificying the configuration.
+            output_root: The root directory to save output files in.
         """
         self.opt = opt
         self.parameters_glob = "*.pkl"
+        self.output_root = output.root
 
     def __call__(self, pcl_0: torch.Tensor) -> torch.Tensor:
         """Evaluate the model on a a set of points.

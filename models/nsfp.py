@@ -14,6 +14,7 @@ from nntime import export_timings, set_global_sync, time_this, timer_end, timer_
 from pytorch3d.ops import knn_points
 
 import losses
+import models.base as base
 import utils
 import utils.refine
 
@@ -32,20 +33,21 @@ def sheet_loss(model, xyz):
     return trunc_err
 
 
-class SceneFlow:
+class SceneFlow(base.SceneFlow):
     """Interface for a scene flow model.
 
     Args:
         opt: A namespace conftaining the model configuration.
     """
 
-    def __init__(self, opt: SimpleNamespace) -> None:
+    def __init__(self, opt: SimpleNamespace, output_root: Path) -> None:
         """Create a scene flow model based on the configuration in opt.
 
         Args:
             opt: A nested namespace specificying the configuration.
+            output_root: The root directory to save output files in.
         """
-        self.opt = opt
+        super().__init__(opt, output_root)
         self.e1_SE3_e0: Optional[Se3] = None
         if opt.timing:
             set_global_sync(True)
@@ -95,7 +97,7 @@ class SceneFlow:
         pcl_1: torch.Tensor,
         e1_SE3_e0: Se3,
         flow: Optional[torch.Tensor] = None,
-        example_name: Optional[Path] = None,
+        example_name: Optional[str] = None,
     ) -> None:
         """Fit the model parameters on a a set of points.
 
@@ -107,6 +109,10 @@ class SceneFlow:
                    annotations. If supplied, the optimization can report
                    progresso on thet test metrics.
         """
+        if self.opt.optim.debug:
+            self.log_dir = self.output_root / example_name
+            self.log_dir.mkdir(exist_ok=True)
+
         early_stopping = EarlyStopping(patience=self.opt.optim.early_patience, min_delta=0.0001)
         self.flow = Flow(self.opt).to(self.opt.device)
 
@@ -135,7 +141,7 @@ class SceneFlow:
         if self.opt.optim.loss.type == "sheet":
             self.flow.load_sheet(self.sheet, example_name)
 
-        for _ in pbar:
+        for self.it in pbar:
             timer_start(self.flow, "full_iteration")
             timer_start(self.flow, "opt_iteration")
             fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_input, pcl_1)
@@ -168,6 +174,9 @@ class SceneFlow:
         optim.zero_grad()
         loss.backward()
         optim.step()
+
+        if self.opt.optim.debug and self.it % 10 == 0:
+            self.save_parameters(self.log_dir / f"{self.it:04d}")
         return fw_flow_pred, bw_flow_pred, loss
 
     def load_parameters(self, filename: Path) -> None:

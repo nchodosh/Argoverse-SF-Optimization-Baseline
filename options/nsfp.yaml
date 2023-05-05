@@ -13,6 +13,7 @@ arch:
   refine: False
 
 optim:
+  debug: false
   iters: 2000
   early_patience: 100
   lr: 0.004
