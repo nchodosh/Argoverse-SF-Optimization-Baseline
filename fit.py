@@ -57,7 +57,7 @@ def fit(
 
         example_name = data_loader.example_id(i)
         model.fit(pcl_0, pcl_1, ego1_SE3_ego0, flow, example_name=example_name)
-        pred_flow, is_dynamic = model(pcl_0)
+        pred_flow, is_dynamic = model(pcl_0, ego1_SE3_ego0)
         model.save_parameters(output_root / example_name)
     export_timings(model.flow, output_root / "timing.csv")
 
