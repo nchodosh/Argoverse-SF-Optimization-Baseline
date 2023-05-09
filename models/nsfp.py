@@ -94,6 +94,7 @@ class SceneFlow(base.SceneFlow):
         pcl_1: torch.Tensor,
         e1_SE3_e0: Se3,
         flow: Optional[torch.Tensor] = None,
+        background_mask: Optional[torch.Tensor] = None,
         example_name: Optional[str] = None,
     ) -> None:
         """Fit the model parameters on a a set of points.
@@ -156,13 +157,17 @@ class SceneFlow(base.SceneFlow):
             if early_stopping.step(loss):
                 self.flow.load_state_dict(best_params)
                 fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_input, pcl_1)
-                epe = (fw_flow_pred - flow).norm(dim=-1).mean().detach().item()
-                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe: {epe:.3f}")
+                epe = (fw_flow_pred - flow).norm(dim=-1)
+                epe_fg = epe[~background_mask].mean().detach().item()
+                epe_bg = epe[background_mask].mean().detach().item()
+                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe_bg: {epe_bg:.3f} epe_fg: {epe_g:.3f}")
                 break
 
             if flow is not None:
-                epe = (fw_flow_pred - flow).norm(dim=-1).mean().detach().item()
-                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe: {epe:.3f}")
+                epe = (fw_flow_pred - flow).norm(dim=-1)
+                epe_fg = epe[~background_mask].mean().detach().item()
+                epe_bg = epe[background_mask].mean().detach().item()
+                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe_bg: {epe_bg:.3f} epe_fg: {epe_g:.3f}")
             else:
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f}")
             timer_end(self.flow, "full_iteration")

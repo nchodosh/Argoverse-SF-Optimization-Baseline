@@ -52,6 +52,7 @@ class Dataloader(Dataset):
             "flow": flow.float(),
             "ego1_SE3_ego0": sensor1_SE3_sensor0,
             "annotations": annotations,
+            "background_mask": ex.ego_flow_mask,
         }
 
     def example_id_to_index(self, example_id: str) -> int:
