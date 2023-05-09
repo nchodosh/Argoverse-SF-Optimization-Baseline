@@ -126,9 +126,8 @@ class SceneFlow(base.SceneFlow):
         if flow is not None:
             flow = flow.to(self.opt.device)
 
-        optim = torch.optim.Adam(
+        optim = torch.optim.SGD(
             [dict(params=self.flow.parameters(), lr=self.opt.optim.lr, weight_decay=self.opt.optim.weight_decay)],
-            amsgrad=True,
         )
 
         pbar = tqdm.trange(self.opt.optim.iters, desc="optimizing...", dynamic_ncols=True)
