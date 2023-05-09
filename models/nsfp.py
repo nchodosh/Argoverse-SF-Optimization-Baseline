@@ -94,7 +94,6 @@ class SceneFlow(base.SceneFlow):
         pcl_1: torch.Tensor,
         e1_SE3_e0: Se3,
         flow: Optional[torch.Tensor] = None,
-        background_mask: Optional[torch.Tensor] = None,
         example_name: Optional[str] = None,
     ) -> None:
         """Fit the model parameters on a a set of points.
@@ -120,9 +119,11 @@ class SceneFlow(base.SceneFlow):
         self.flow = Flow(self.opt).to(self.opt.device)
 
         self.e1_SE3_e0 = e1_SE3_e0
+        rigid_flow = (transform_points(self.e1_SE3_e0.matrix(), pcl_0) - pcl_0).detach()
+        non_rigid_flow = flow - rigid_flow
+        dynamic_mask = non_rigid_flow.norm(dim=-1) > 0.05
         if self.opt.arch.motion_compensate:
             pcl_input = transform_points(e1_SE3_e0.matrix(), pcl_0).detach()
-            rigid_flow = (transform_points(self.e1_SE3_e0.matrix(), pcl_0) - pcl_0).detach()
             flow = flow - rigid_flow
         else:
             pcl_input = pcl_0
@@ -158,16 +159,16 @@ class SceneFlow(base.SceneFlow):
                 self.flow.load_state_dict(best_params)
                 fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_input, pcl_1)
                 epe = (fw_flow_pred - flow).norm(dim=-1)
-                epe_fg = epe[~background_mask].mean().detach().item()
-                epe_bg = epe[background_mask].mean().detach().item()
-                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe_bg: {epe_bg:.3f} epe_fg: {epe_g:.3f}")
+                epe_fg = epe[~dynamic_mask].mean().detach().item()
+                epe_bg = epe[dynamic_mask].mean().detach().item()
+                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe_s: {epe_bg:.3f} epe_d: {epe_g:.3f}")
                 break
 
             if flow is not None:
                 epe = (fw_flow_pred - flow).norm(dim=-1)
-                epe_fg = epe[~background_mask].mean().detach().item()
-                epe_bg = epe[background_mask].mean().detach().item()
-                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe_bg: {epe_bg:.3f} epe_fg: {epe_g:.3f}")
+                epe_fg = epe[~dynamic_mask].mean().detach().item()
+                epe_bg = epe[dynamic_mask].mean().detach().item()
+                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe_s: {epe_bg:.3f} epe_d: {epe_g:.3f}")
             else:
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f}")
             timer_end(self.flow, "full_iteration")
