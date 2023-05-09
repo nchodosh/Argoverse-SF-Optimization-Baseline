@@ -27,7 +27,7 @@ def inlier_loss(x, k=0.2):
 
 def sheet_loss(model, xyz):
     ryp = utils.geometry.ryp(xyz)
-    sheet_depth = model.depth(ryp[:, 1:]).squeeze()
+    sheet_depth = model.depth(ryp[:, 1:]).squeeze().detach()
     err = (sheet_depth - ryp[:, 0].to(sheet_depth.device)).abs()
     trunc_err = inlier_loss(err)
     return trunc_err
