@@ -29,7 +29,7 @@ def sheet_loss(model, xyz):
     ryp = utils.geometry.ryp(xyz)
     sheet_depth = model.depth(ryp[:, 1:]).squeeze()
     err = (sheet_depth - ryp[:, 0].to(sheet_depth.device)).abs()
-    trunc_err = inlier_loss(err)
+    trunc_err = torch.clamp(err, 0, 1)
     return trunc_err
 
 
