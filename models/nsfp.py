@@ -108,6 +108,11 @@ class SceneFlow(base.SceneFlow):
         """
         if self.opt.optim.debug:
             self.log_dir = self.output_root / example_name
+            if self.log_dir.exists():
+                files = list(self.log_dir.iterdir())
+                for f in files:
+                    f.unlink()
+
             self.log_dir.mkdir(exist_ok=True)
 
         early_stopping = EarlyStopping(patience=self.opt.optim.early_patience, min_delta=0.0001)
