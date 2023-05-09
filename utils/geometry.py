@@ -14,7 +14,7 @@ def filter_close(xyz, return_mask=False):
 
 
 def filter_far(xyz, return_mask=False):
-    mask = xyz[:, :3].norm(dim=-1) < 50
+    mask = xyz[:, :3].norm(dim=-1) < 35
     if return_mask:
         return xyz[mask], mask
     return xyz[mask]
