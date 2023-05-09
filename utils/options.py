@@ -118,7 +118,7 @@ def override_options(
 
 
 def load_saved_options(fname: Path, override_args: Optional[List[str]] = None) -> SimpleNamespace:
-    """Load a saved options file and apply ovveride arguments if supplied.
+    """Load a saved options file and apply override arguments if supplied.
 
     Args:
         fname: The path to the saved options.

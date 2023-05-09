@@ -59,31 +59,28 @@ class SceneFlow(base.SceneFlow):
 
             self.sheet, self.sheet_cfg = sheet_models.base.load(Path(opt.optim.loss.models_root).parent)
 
-    def __call__(self, pcl_0: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    @torch.no_grad()
+    def __call__(self, pcl_0: torch.Tensor, e1_SE3_e0: Se3) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the model on a a set of points.
 
         Args:
             pcl_0: (N,3) tensor of locations to evaluate the flow at.
-
-        Raises:
-            RuntimeError: If this method is called before calling fit().
+            e1_SE3_e0: Relative pose of the ego vehicle in the second frame.
 
         Returns:
             flow: (N,3) tensor of flow predictions.
             is_dynamic (N,) Dynamic segmentation predictions
         """
         if self.opt.arch.motion_compensate:
-            pcl_input = transform_points(self.e1_SE3_e0.matrix(), pcl_0)
+            pcl_input = transform_points(e1_SE3_e0.matrix(), pcl_0)
         else:
             pcl_input = pcl_0
         pred = self.flow.fw(self.opt, pcl_input.to(self.opt.device)).detach().cpu()
         if self.opt.arch.refine:
             pred = torch.from_numpy(utils.refine.refine_flow(pcl_0.numpy(), pred.numpy()))
 
-        rigid_flow = transform_points(self.e1_SE3_e0.matrix(), pcl_0) - pcl_0
+        rigid_flow = transform_points(e1_SE3_e0.matrix(), pcl_0) - pcl_0
         if self.opt.arch.motion_compensate:
-            if self.e1_SE3_e0 is None:
-                raise RuntimeError("Trying to evaluate a model that has not been fit!")
             is_dynamic = pred.norm(dim=-1) > 0.05
             pred = pred + rigid_flow
         else:
@@ -184,11 +181,9 @@ class SceneFlow(base.SceneFlow):
 
         Args:
             filename: Path to the parameters file produced by save_parameters.
-
-        Raises:
-            NotImplementedError: If the subclass has not implemented this.
         """
-        raise NotImplementedError()
+        params = torch.load(filename, map_location=self.opt.device)
+        self.flow = Flow(self.opt).to(self.opt.device)
 
     def save_parameters(self, filename: Path) -> None:
         """Save parameters for the underlying model.
@@ -198,6 +193,17 @@ class SceneFlow(base.SceneFlow):
         """
         filename = filename.with_suffix(".pt")
         torch.save({"ckpt": self.flow.state_dict()}, filename)
+
+    def parameters_to_example(self, filename: Path) -> str:
+        """Get the coresponding example for the given parameter output file.
+
+        Args:
+            filename: Path used to save parameters for the model.
+
+        Returns:
+            The example_id associated with the filename.
+        """
+        return filename.stem
 
 
 class Flow(torch.nn.Module):
