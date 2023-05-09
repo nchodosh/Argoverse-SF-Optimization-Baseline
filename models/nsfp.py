@@ -159,16 +159,16 @@ class SceneFlow(base.SceneFlow):
                 self.flow.load_state_dict(best_params)
                 fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_input, pcl_1)
                 epe = (fw_flow_pred - flow).norm(dim=-1)
-                epe_fg = epe[~dynamic_mask].mean().detach().item()
-                epe_bg = epe[dynamic_mask].mean().detach().item()
-                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe_s: {epe_bg:.3f} epe_d: {epe_g:.3f}")
+                epe_d = epe[dynamic_mask].mean().detach().item()
+                epe_s = epe[~dynamic_mask].mean().detach().item()
+                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe_s: {epe_s:.3f} epe_d: {epe_d:.3f}")
                 break
 
             if flow is not None:
                 epe = (fw_flow_pred - flow).norm(dim=-1)
-                epe_fg = epe[~dynamic_mask].mean().detach().item()
-                epe_bg = epe[dynamic_mask].mean().detach().item()
-                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe_s: {epe_bg:.3f} epe_d: {epe_g:.3f}")
+                epe_d = epe[dynamic_mask].mean().detach().item()
+                epe_s = epe[~dynamic_mask].mean().detach().item()
+                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe_s: {epe_s:.3f} epe_d: {epe_d:.3f}")
             else:
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f}")
             timer_end(self.flow, "full_iteration")
