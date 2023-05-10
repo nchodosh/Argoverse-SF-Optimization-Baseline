@@ -181,7 +181,9 @@ class SceneFlow(base.SceneFlow):
                 epe = (fw_flow_pred - flow).norm(dim=-1)
                 epe_d = epe[dynamic_mask].mean().detach().item()
                 epe_s = epe[~dynamic_mask].mean().detach().item()
-                pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f} epe_s: {epe_s:.3f} epe_d: {epe_d:.3f}")
+                pbar.set_postfix(
+                    loss=f"loss: {loss.detach().item():.3f} epe_s: {epe_s:.3f} epe_d: {epe_d:.3f} lr: {sched._last_lr[0]:.2g}"
+                )
             else:
                 pbar.set_postfix(loss=f"loss: {loss.detach().item():.3f}")
             timer_end(self.flow, "full_iteration")
