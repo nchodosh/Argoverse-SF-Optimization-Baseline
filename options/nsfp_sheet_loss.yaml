@@ -14,14 +14,14 @@ arch:
   refine: False
 
 optim:
-  type: Adam
+  type: SGD
   args:
-    lr: 0.01
+    lr: 0.1
     weight_decay: 0.0
   sched:
     type: StepLR
     args:
-      step_size: 2000
+      step_size: 100
       
   debug: false
   iters: 5000
