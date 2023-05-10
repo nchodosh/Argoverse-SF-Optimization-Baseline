@@ -32,7 +32,7 @@ def inlier_loss(x, k=0.3):
 def sheet_loss(model, xyz):
     ryp = utils.geometry.ryp(xyz)
     sheet_depth = model.depth_with_grad(ryp[:, 1:]).squeeze()
-    err = (sheet_depth - ryp[:, 0].to(sheet_depth.device)).clip(0, 1) ** 2
+    err = (sheet_depth - ryp[:, 0].to(sheet_depth.device)).abs().clip(0, 1) ** 2
     return err
 
 
