@@ -1,4 +1,5 @@
 cfg_name: nsfp
+model_name: nsfp
 device: cuda
 timing: false
 

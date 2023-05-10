@@ -124,7 +124,7 @@ def load_model(weights_file: Path, override: Optional[List[str]] = None) -> Tupl
         )
 
     opt = options.load_saved_options(options_file, override)
-    module = importlib.import_module(f"models.{opt.cfg_name}")
+    module = importlib.import_module(f"models.{opt.model_name}")
     model = module.SceneFlow(opt, output_root=None)
 
     model.load_parameters(weights_file)

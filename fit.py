@@ -100,7 +100,7 @@ if __name__ == "__main__":
     cli_args = options.parse_arguments([args.model] + args.model_args)
     model_cfg = options.set(cli_args)
 
-    m = importlib.import_module(f"models.{model_cfg.cfg_name}")
+    m = importlib.import_module(f"models.{model_cfg.model_name}")
     model = m.SceneFlow(model_cfg, output_root=output_root)
 
     options.save_options_file(model.opt, output_root / "options.yaml")

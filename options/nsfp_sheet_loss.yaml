@@ -1,4 +1,5 @@
-cfg_name: nsfp
+cfg_name: nsfp_sheet_loss
+model_name: nsfp
 device: cuda
 timing: false
 
