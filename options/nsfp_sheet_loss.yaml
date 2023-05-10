@@ -17,16 +17,16 @@ optim:
   type: Adam
   args:
     lr: 0.004
-    weight_decay: 0.0001
+    weight_decay: 0.000
   sched:
     type: ReduceLROnPlateau
     args:
-      factor: 0.1
-      patience: 100
+      factor: 0.5
+      patience: 50
       
   debug: false
-  iters: 5000
-  early_patience: 200
+  iters: 2000
+  early_patience: 100
   chamfer_radius: 2
   loss:
     type: sheet
