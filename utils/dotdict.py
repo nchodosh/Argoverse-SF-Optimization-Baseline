@@ -1,7 +1,7 @@
 """Utilities for converting between nested dict and nested namespace representations."""
-
+import inspect
 from types import SimpleNamespace
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
 
 def dict_to_namespace(d: Dict[str, Any]) -> SimpleNamespace:
@@ -34,3 +34,12 @@ def namespace_to_dict(ns: SimpleNamespace) -> Dict[str, Any]:
         also namespaces will be recursively converted to dicts as well.
     """
     return {k: namespace_to_dict(v) if isinstance(v, SimpleNamespace) else v for k, v in ns.__dict__.items()}
+
+
+def namespace_to_kwargs(args: SimpleNamespace, fn: Callable[[Any], Any]) -> Dict[str, Any]:
+    args_dict = namespace_to_dict(args)
+    available_args = inspect.getfullargspec(fn).args
+    to_remove = [key for key in args_dict if key not in available_args]
+    for key in to_remove:
+        args_dict.pop(key)
+    return args_dict

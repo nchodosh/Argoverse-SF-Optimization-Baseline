@@ -13,10 +13,12 @@ arch:
   refine: False
 
 optim:
+  type: Adam
+  args:
+    lr: 0.004
   debug: false
   iters: 2000
   early_patience: 100
-  lr: 0.004
   chamfer_radius: 2
   weight_decay: 0.0001
   loss:

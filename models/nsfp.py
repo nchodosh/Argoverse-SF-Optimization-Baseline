@@ -1,6 +1,7 @@
 """Neural Scene Flow Prior model plus extensions."""
 
 import copy
+import inspect
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Callable, Optional, Tuple
@@ -12,10 +13,13 @@ from kornia.geometry.liegroup import Se3
 from kornia.geometry.linalg import transform_points
 from nntime import export_timings, set_global_sync, time_this, timer_end, timer_start
 from pytorch3d.ops import knn_points
+from torch.optim import ReduceLROnPlateau
 
 import losses
 import models.base as base
 import utils
+import utils.dotdict
+import utils.options
 import utils.refine
 
 dummy_module = torch.nn.Linear(1, 1)
@@ -88,6 +92,16 @@ class SceneFlow(base.SceneFlow):
 
         return pred, is_dynamic
 
+    def make_optimizer(self, parameters):
+        optimizer = getattr(torch.optim, self.opt.optim.type)
+        optim_args = utils.dotdict.namespace_to_kwargs(self.opt.optim.args, optimizer)
+        return optimizer(parameters, **optim_args)
+
+    def make_scheduler(self, optim):
+        scheduler = getattr(torch.optim.lr_scheduler, self.opt.optim.sched.type)
+        sched_args = utils.dotdict.namespace_to_kwargs(self.opt.optim.sched.args, scheduler)
+        return scheduler(optim, **sched_args)
+
     def fit(
         self,
         pcl_0: torch.Tensor,
@@ -133,9 +147,8 @@ class SceneFlow(base.SceneFlow):
         if flow is not None:
             flow = flow.to(self.opt.device)
 
-        optim = torch.optim.SGD(
-            [dict(params=self.flow.parameters(), lr=self.opt.optim.lr, weight_decay=self.opt.optim.weight_decay)],
-        )
+        optim = self.make_optimizer(self.flow.parameters())
+        sched = self.make_scheduler(optim)
 
         pbar = tqdm.trange(self.opt.optim.iters, desc="optimizing...", dynamic_ncols=True)
 
@@ -148,7 +161,7 @@ class SceneFlow(base.SceneFlow):
         for self.it in pbar:
             timer_start(self.flow, "full_iteration")
             timer_start(self.flow, "opt_iteration")
-            fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, pcl_input, pcl_1)
+            fw_flow_pred, bw_flow_pred, loss = self.optimization_iteration(optim, sched, pcl_input, pcl_1)
             timer_end(self.flow, "opt_iteration")
 
             if best_loss > loss.detach().item():
@@ -175,13 +188,17 @@ class SceneFlow(base.SceneFlow):
 
         self.flow.load_state_dict(best_params)
 
-    def optimization_iteration(self, optim, pcl_0, pcl_1):
+    def optimization_iteration(self, optim, sched, pcl_0, pcl_1):
         fw_flow_pred = self.flow.fw(self.opt, pcl_0)
         bw_flow_pred = self.flow.bw(self.opt, pcl_0 + fw_flow_pred)
         loss = self.flow.compute_loss(fw_flow_pred, bw_flow_pred, pcl_0, pcl_1)
         optim.zero_grad()
         loss.backward()
         optim.step()
+        if isinstance(sched, ReduceLROnPlateau):
+            sched.step(loss)
+        else:
+            sched.step()
 
         if self.opt.optim.debug and self.it % 10 == 0:
             self.save_parameters(self.log_dir / f"{self.it:04d}")
