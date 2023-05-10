@@ -18,10 +18,11 @@ optim:
   args:
     lr: 0.1
     weight_decay: 0.0
+    momentum: 0.9
   sched:
     type: StepLR
     args:
-      step_size: 100
+      step_size: 250
       
   debug: false
   iters: 5000
