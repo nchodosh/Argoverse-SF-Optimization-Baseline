@@ -49,13 +49,15 @@ class WorldSheet:
         raise NotImplementedError()
 
 
-def load(dir):
+def load(dir, device=None):
     path = Path(dir)
     opt_file = path / "options.yaml"
     if not opt_file.exists():
         raise FileNotFoundError(f"{str(opt_file)} not found")
 
     cfg = options.load_options(opt_file)
+    if device is not None:
+        cfg.device = device
 
     m = importlib.import_module(f"sheet_models.{cfg.cfg_name}")
     model = m.WorldSheet(cfg)

@@ -25,16 +25,15 @@ import utils.refine
 dummy_module = torch.nn.Linear(1, 1)
 
 
-def inlier_loss(x, k=0.2):
+def inlier_loss(x, k=0.3):
     return 1 / (1 + torch.exp(-x.abs() / k)) - 1 / 2
 
 
 def sheet_loss(model, xyz):
     ryp = utils.geometry.ryp(xyz)
-    sheet_depth = model.depth(ryp[:, 1:]).squeeze()
-    err = (sheet_depth - ryp[:, 0].to(sheet_depth.device)).abs()
-    trunc_err = inlier_loss(err)
-    return trunc_err
+    sheet_depth = model.depth_with_grad(ryp[:, 1:]).squeeze()
+    err = (sheet_depth - ryp[:, 0].to(sheet_depth.device)).clip(0, 1) ** 2
+    return err
 
 
 class SceneFlow(base.SceneFlow):
@@ -61,7 +60,9 @@ class SceneFlow(base.SceneFlow):
         if opt.optim.loss.type == "sheet":
             import sheet_models.base
 
-            self.sheet, self.sheet_cfg = sheet_models.base.load(Path(opt.optim.loss.models_root).parent)
+            self.sheet, self.sheet_cfg = sheet_models.base.load(
+                Path(opt.optim.loss.models_root).parent, device=opt.device
+            )
 
     @torch.no_grad()
     def __call__(self, pcl_0: torch.Tensor, e1_SE3_e0: Se3) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -156,7 +157,7 @@ class SceneFlow(base.SceneFlow):
         best_params = self.flow.state_dict()
 
         if self.opt.optim.loss.type == "sheet":
-            self.flow.load_sheet(self.sheet, example_name)
+            self.flow.load_sheet(self.sheet, example_name, self.opt.device)
 
         for self.it in pbar:
             timer_start(self.flow, "full_iteration")
@@ -193,7 +194,7 @@ class SceneFlow(base.SceneFlow):
     def optimization_iteration(self, optim, sched, pcl_0, pcl_1):
         fw_flow_pred = self.flow.fw(self.opt, pcl_0)
         bw_flow_pred = self.flow.bw(self.opt, pcl_0 + fw_flow_pred)
-        loss = self.flow.compute_loss(fw_flow_pred, bw_flow_pred, pcl_0, pcl_1)
+        loss = self.flow.compute_loss(fw_flow_pred + pcl_0, bw_flow_pred, pcl_0, pcl_1)
         optim.zero_grad()
         loss.backward()
         optim.step()
@@ -206,14 +207,28 @@ class SceneFlow(base.SceneFlow):
             self.save_parameters(self.log_dir / f"{self.it:04d}")
         return fw_flow_pred, bw_flow_pred, loss
 
+    def point_gradients(self, pcl_0, pcl_1, e1_SE3_e0):
+        if self.opt.arch.motion_compensate:
+            pcl_input = transform_points(e1_SE3_e0.matrix(), pcl_0)
+        else:
+            pcl_input = pcl_0
+        fw_flow_pred = self.flow.fw(self.opt, pcl_input)
+        bw_flow_pred = self.flow.bw(self.opt, pcl_input + fw_flow_pred)
+        pcl_0_def = (pcl_input + fw_flow_pred).detach().requires_grad_(True)
+        loss = self.flow.compute_loss(pcl_0_def, bw_flow_pred, pcl_input, pcl_1)
+        loss.backward()
+        pcl_grad = pcl_0_def.grad.clone()
+        return pcl_0_def.detach(), pcl_grad
+
     def load_parameters(self, filename: Path) -> None:
         """Load saved parameters for the underlying model.
 
         Args:
             filename: Path to the parameters file produced by save_parameters.
         """
-        params = torch.load(filename, map_location=self.opt.device)
+        params = torch.load(filename, map_location=self.opt.device)["ckpt"]
         self.flow = Flow(self.opt).to(self.opt.device)
+        self.flow.load_state_dict(params)
         if self.opt.optim.loss.type == "sheet":
             self.flow.load_sheet(self.sheet, self.parameters_to_example(filename))
 
@@ -255,10 +270,11 @@ class Flow(torch.nn.Module):
         result_file = (Path(self.opt.optim.loss.models_root) / example_name).with_suffix(sheet.parameters_suffix)
         self.sheet = sheet
         self.sheet.load_parameters(result_file)
+        self.sheet.graph
 
     @time_this()
     def compute_loss(
-        self, fw_flow_pred: torch.Tensor, bw_flow_pred: torch.Tensor, pcl_0: torch.Tensor, pcl_1: torch.Tensor
+        self, pcl_0_def: torch.Tensor, bw_flow_pred: torch.Tensor, pcl_0: torch.Tensor, pcl_1: torch.Tensor
     ) -> torch.Tensor:
         """Compute the optimization loss.
 
@@ -274,14 +290,14 @@ class Flow(torch.nn.Module):
         if self.opt.optim.loss.type == "chamfer":
             l = lambda x, y: losses.trunc_chamfer(x, y, 2).mean()
             timer_start(self, "fw_chamf")
-            fw_chamf = l(pcl_0 + fw_flow_pred, pcl_1)
+            fw_chamf = l(pcl_0_def, pcl_1)
             timer_end(self, "fw_chamf")
             timer_start(self, "bw_chamf")
-            bw_chamf = l(pcl_0 + fw_flow_pred - bw_flow_pred, pcl_0)
+            bw_chamf = l(pcl_0_def - bw_flow_pred, pcl_0)
             timer_end(self, "bw_chamf")
             return fw_chamf + bw_chamf
         elif self.opt.optim.loss.type == "sheet":
-            return sheet_loss(self.sheet, pcl_0 + fw_flow_pred).float().mean()
+            return sheet_loss(self.sheet, pcl_0_def).float().mean()
 
 
 class ImplicitFunction(torch.nn.Module):

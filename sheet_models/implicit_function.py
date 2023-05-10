@@ -25,6 +25,15 @@ class WorldSheet(base.WorldSheet):
         self.graph.to(opt.device)
         self.scheduler = getattr(torch.optim.lr_scheduler, opt.optim.sched.type)
 
+    def depth_with_grad(self, coords):
+        x = self.graph.depth(coords)
+        if self.opt.out.invert_depth:
+            depth = 1 / x
+        else:
+            depth = x
+        depth = depth.clip(0, MAX_DEPTH)
+        return depth
+
     def depth(self, coords):
         x = self.graph.depth(coords.float().to(self.opt.device))
         if self.opt.out.invert_depth:

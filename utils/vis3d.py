@@ -7,6 +7,15 @@ import data.utils
 colors = sns.color_palette()
 
 
+def gradients(model, datum):
+    fig = mlab.figure(bgcolor=(0.0, 0.0, 0.0))
+    pts, grad = model.point_gradients(datum["pcl_0"], datum["pcl_1"], datum["ego1_SE3_ego0"])
+    grad_norm = grad.norm(dim=-1)
+    mlab.quiver3d(*pts.T, *grad.T, scalars=grad_norm, scale_mode="scalar", scale_factor=1000, figure=fig)
+    mlab.points3d(*datum["pcl_1"].T, color=colors[0], scale_factor=0.05, figure=fig)
+    mlab.points3d(*pts.T, color=colors[1], scale_factor=0.05, figure=fig)
+
+
 def flow_pred(model, datum):
     fig = mlab.figure(bgcolor=(0.0, 0.0, 0.0))
     emax = 0.3
@@ -36,4 +45,4 @@ def flow_pred(model, datum):
     return fig, pts, tube, tube_surf
 
 
-visualizations = {"flow": flow_pred}
+visualizations = {"flow": flow_pred, "grad": gradients}
