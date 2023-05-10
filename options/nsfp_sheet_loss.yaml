@@ -19,13 +19,14 @@ optim:
     lr: 0.004
     weight_decay: 0.0001
   sched:
-    type: StepLR
+    type: ReduceLROnPlateau
     args:
-      step_size: 1000
+      factor: 0.1
+      patience: 100
       
   debug: false
   iters: 5000
-  early_patience: 300
+  early_patience: 200
   chamfer_radius: 2
   loss:
     type: sheet
