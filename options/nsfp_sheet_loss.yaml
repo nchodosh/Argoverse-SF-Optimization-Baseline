@@ -1,0 +1,34 @@
+cfg_name: nsfp
+device: cuda
+timing: false
+
+arch:
+  filter_size: 128
+  activ: relu
+  pos_enc: False
+  L: 4
+  pos_scale: 100
+  backward_flow: True
+  motion_compensate: False
+  refine: False
+
+optim:
+  type: SGD
+  args:
+    lr: 0.01
+    weight_decay: 0.0
+    momentum: 0.1
+  sched:
+    type: ReduceLROnPlateau
+    args:
+      factor: 0.5
+      patience: 100
+      
+  debug: false
+  iters: 2000
+  early_patience: 2000
+  chamfer_radius: 2
+  loss:
+    type: chamfer
+    models_root: 
+  
