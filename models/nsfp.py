@@ -157,7 +157,7 @@ class SceneFlow(base.SceneFlow):
         best_params = self.flow.state_dict()
 
         if self.opt.optim.loss.type == "sheet":
-            self.flow.load_sheet(self.sheet, example_name, self.opt.device)
+            self.flow.load_sheet(self.sheet, example_name)
 
         for self.it in pbar:
             timer_start(self.flow, "full_iteration")
