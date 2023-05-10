@@ -9,7 +9,7 @@ arch:
   L: 4
   pos_scale: 100
   backward_flow: True
-  motion_compensate: False
+  motion_compensate: True
   refine: False
 
 optim:
