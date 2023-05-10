@@ -14,11 +14,10 @@ arch:
   refine: False
 
 optim:
-  type: SGD
+  type: Adam
   args:
-    lr: 0.1
+    lr: 0.004
     weight_decay: 0.0
-    momentum: 0.9
   sched:
     type: StepLR
     args:
