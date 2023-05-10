@@ -19,10 +19,9 @@ optim:
     lr: 0.004
     weight_decay: 0.000
   sched:
-    type: ReduceLROnPlateau
+    type: StepLR
     args:
-      factor: 0.5
-      patience: 50
+      step_size: 500
       
   debug: false
   iters: 2000
