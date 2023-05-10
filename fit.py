@@ -66,7 +66,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="fit", description="Fit scene flow models to pairs of lidar scans")
 
     parser.add_argument("name", type=str, help="name to save results under")
-    parser.add_argument("model", choices=models.__all__, help="which type of model to fit")
+    parser.add_argument("model", help="which type of model to fit")
     parser.add_argument(
         "model_args",
         nargs="*",
