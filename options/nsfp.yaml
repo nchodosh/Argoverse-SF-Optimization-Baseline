@@ -19,7 +19,8 @@ optim:
     weight_decay: 0.0
   sched:
     type: StepLR
-    step_size: 2000
+    args:
+      step_size: 2000
       
   debug: false
   iters: 2000
