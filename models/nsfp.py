@@ -13,7 +13,7 @@ from kornia.geometry.liegroup import Se3
 from kornia.geometry.linalg import transform_points
 from nntime import export_timings, set_global_sync, time_this, timer_end, timer_start
 from pytorch3d.ops import knn_points
-from torch.optim import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import losses
 import models.base as base
