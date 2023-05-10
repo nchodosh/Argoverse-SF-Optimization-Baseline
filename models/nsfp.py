@@ -1,7 +1,7 @@
 """Neural Scene Flow Prior model plus extensions."""
 
 import copy
-import inspect
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Callable, Optional, Tuple
@@ -150,7 +150,7 @@ class SceneFlow(base.SceneFlow):
         optim = self.make_optimizer(self.flow.parameters())
         sched = self.make_scheduler(optim)
 
-        pbar = tqdm.trange(self.opt.optim.iters, desc="optimizing...", dynamic_ncols=True)
+        pbar = tqdm.trange(self.opt.optim.iters, desc=f"{example_name}", dynamic_ncols=True)
 
         best_loss = float("inf")
         best_params = self.flow.state_dict()
@@ -214,6 +214,8 @@ class SceneFlow(base.SceneFlow):
         """
         params = torch.load(filename, map_location=self.opt.device)
         self.flow = Flow(self.opt).to(self.opt.device)
+        if self.opt.optim.loss.type == "sheet":
+            self.flow.load_sheet(self.sheet, self.parameters_to_example(filename))
 
     def save_parameters(self, filename: Path) -> None:
         """Save parameters for the underlying model.
@@ -233,6 +235,8 @@ class SceneFlow(base.SceneFlow):
         Returns:
             The example_id associated with the filename.
         """
+        if re.match("\d+", filename.stem):
+            return filename.parent.stem
         return filename.stem
 
 
