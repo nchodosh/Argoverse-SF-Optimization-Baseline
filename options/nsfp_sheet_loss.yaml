@@ -17,7 +17,7 @@ optim:
   type: Adam
   args:
     lr: 0.004
-    weight_decay: 0.0
+    weight_decay: 0.0001
   sched:
     type: StepLR
     args:
@@ -25,7 +25,7 @@ optim:
       
   debug: false
   iters: 5000
-  early_patience: 500
+  early_patience: 300
   chamfer_radius: 2
   loss:
     type: sheet
