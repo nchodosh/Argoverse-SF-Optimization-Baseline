@@ -14,16 +14,15 @@ arch:
   refine: False
 
 optim:
-  type: SGD
+  type: RMSProp
   args:
     lr: 0.01
     weight_decay: 0.0
-    momentum: 0.1
+    momentum: 0.0
   sched:
-    type: ReduceLROnPlateau
+    type: StepLR
     args:
-      factor: 0.5
-      patience: 100
+      step_size: 2000
       
   debug: false
   iters: 5000
