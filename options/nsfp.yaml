@@ -16,11 +16,11 @@ optim:
   type: Adam
   args:
     lr: 0.004
+    weight_decay: 0.0
   debug: false
   iters: 2000
   early_patience: 100
   chamfer_radius: 2
-  weight_decay: 0.0001
   loss:
     type: chamfer
     models_root: 
