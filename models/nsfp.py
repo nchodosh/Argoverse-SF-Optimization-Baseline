@@ -170,7 +170,7 @@ class SceneFlow(base.SceneFlow):
 
             if early_stopping.step(loss):
                 self.flow.load_state_dict(best_params)
-                fw_flow_pred = self.flow.fw(self.opt, pcl_0)
+                fw_flow_pred = self.flow.fw(self.opt, pcl_input)
                 epe = (fw_flow_pred - flow).norm(dim=-1)
                 epe_d = epe[dynamic_mask].mean().detach().item()
                 epe_s = epe[~dynamic_mask].mean().detach().item()

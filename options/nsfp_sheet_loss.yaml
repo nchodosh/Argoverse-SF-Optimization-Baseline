@@ -9,7 +9,7 @@ arch:
   L: 4
   pos_scale: 100
   backward_flow: True
-  motion_compensate: False
+  motion_compensate: True
   refine: False
 
 optim:
@@ -25,10 +25,10 @@ optim:
       patience: 100
       
   debug: false
-  iters: 2000
-  early_patience: 2000
+  iters: 5000
+  early_patience: 500
   chamfer_radius: 2
   loss:
-    type: chamfer
-    models_root: 
+    type: sheet
+    models_root: ../beyond-chamfer/world_sheet/outputs/impl_new_default/nuscenes/
   
