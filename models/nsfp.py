@@ -25,14 +25,14 @@ import utils.refine
 dummy_module = torch.nn.Linear(1, 1)
 
 
-def inlier_loss(x, k=0.3):
+def inlier_loss(x, k=0.1):
     return 1 / (1 + torch.exp(-x.abs() / k)) - 1 / 2
 
 
 def sheet_loss(model, xyz):
     ryp = utils.geometry.ryp(xyz)
     sheet_depth = model.depth_with_grad(ryp[:, 1:]).squeeze()
-    err = (sheet_depth - ryp[:, 0].to(sheet_depth.device)).abs().clip(0, 1) ** 2
+    err = inlier_loss(sheet_depth - ryp[:, 0].to(sheet_depth.device))
     return err
 
 
