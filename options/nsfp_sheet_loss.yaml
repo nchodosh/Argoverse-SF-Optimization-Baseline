@@ -14,11 +14,10 @@ arch:
   refine: False
 
 optim:
-  type: RMSprop
+  type: Adam
   args:
     lr: 0.01
     weight_decay: 0.0
-    momentum: 0.0
   sched:
     type: StepLR
     args:
