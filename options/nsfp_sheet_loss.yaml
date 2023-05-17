@@ -22,6 +22,7 @@ optim:
   sched:
     type: StepLR
     args:
+      gamma: 0.5
       step_size: 500
       
   debug: false
