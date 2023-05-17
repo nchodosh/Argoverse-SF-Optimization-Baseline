@@ -52,7 +52,7 @@ class WorldSheet(base.WorldSheet):
         eqs = eqs.permute([0, 2, 1]).to(device)
         homo_coords = torch.nn.functional.pad(coords[valid], (0, 1), value=1)
         coeff = torch.linalg.solve(eqs.float(), homo_coords)
-        d = (coeff * torch.from_numpy(self.interp.values, device=device)[simps].squeeze()).sum(-1)
+        d = (coeff * torch.from_numpy(self.interp.values).to(device)[simps].squeeze()).sum(-1)
         if self.opt.out.invert_depth:
             d = 1 / d
 
