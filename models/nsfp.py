@@ -32,7 +32,9 @@ def inlier_loss(x, k=0.3):
 def sheet_loss(model, xyz):
     ryp = utils.geometry.ryp(xyz)
     sheet_depth = model.depth_with_grad(ryp[:, 1:]).squeeze()
+    invalid = torch.isnan(sheet_depth)
     err = ((sheet_depth - ryp[:, 0]) ** 2).clip(0, 2)
+    err[invalid] = 0
     return err
 
 
@@ -290,7 +292,6 @@ class Flow(torch.nn.Module):
         result_file = (Path(self.opt.optim.loss.models_root) / example_name).with_suffix(sheet.parameters_suffix)
         self.sheet = sheet
         self.sheet.load_parameters(result_file)
-        self.sheet.graph
 
     @time_this()
     def compute_loss(
