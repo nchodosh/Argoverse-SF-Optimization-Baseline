@@ -48,11 +48,11 @@ class WorldSheet(base.WorldSheet):
         valid = sinds > -1
         sinds = sinds[valid]
         simps = tri.simplices[sinds]
-        eqs = torch.from_numpy(np.pad(tri.points[simps], ((0, 0), (0, 0), (0, 1)), constant_values=1))
-        eqs = eqs.permute([0, 2, 1]).to(device)
+
         homo_coords = torch.nn.functional.pad(coords[valid], (0, 1), value=1)
-        coeff = torch.linalg.solve(eqs.float(), homo_coords)
-        d = (coeff * torch.from_numpy(self.interp.values).to(device)[simps].squeeze()).sum(-1)
+        coeff = self.eqs_inv[sinds] @ homo_coords[..., None]
+        d = (coeff * self.values[simps]).squeeze().sum(-1)
+
         if self.opt.out.invert_depth:
             d = 1 / d
 
@@ -70,6 +70,15 @@ class WorldSheet(base.WorldSheet):
     def load_parameters(self, filename):
         with open(Path(filename).with_suffix(".pkl"), "rb") as f:
             self.interp, self.nearest = pickle.load(f)
+            self.values = torch.from_numpy(self.interp.values).to(self.opt.device)
+            eqs = (
+                torch.from_numpy(
+                    np.pad(self.interp.points[self.interp.tri.simplices], ((0, 0), (0, 0), (0, 1)), constant_values=1)
+                )
+                .to(self.opt.device)
+                .permute([0, 2, 1])
+            )
+            self.eqs_inv = torch.linalg.inv(eqs).float()
 
     def save_parameters(self, filename):
         with open(Path(filename).with_suffix(".pkl"), "wb") as f:
