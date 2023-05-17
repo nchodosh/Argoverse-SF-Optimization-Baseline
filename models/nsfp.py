@@ -34,7 +34,7 @@ def sheet_loss(model, xyz):
     sheet_depth = model.depth_with_grad(ryp[:, 1:]).squeeze()
     invalid = torch.isnan(sheet_depth)
     sheet_depth[invalid] = 0
-    err = ((sheet_depth - ryp[:, 0]) ** 2).clip(0, 2)
+    err = (sheet_depth - ryp[:, 0]).abs().clip(0, 1.5) ** 2
     err[invalid] = 0
     return err
 

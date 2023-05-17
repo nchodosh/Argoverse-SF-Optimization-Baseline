@@ -21,8 +21,8 @@ class Dataloader(Dataset):
         with open(self.files[index], "rb") as f:
             ex = dotdict.dict_to_namespace(numpy_to_torch(pickle.load(f)))
 
-        not_ground1 = ex.pcl_t0[:, 2] > 0.3
-        not_ground2 = ex.pcl_t1[:, 2] > 0.3
+        not_ground1 = (ex.pcl_t0[:, 2] > 0.3) & (ex.pcl_t0[:, 2] < 2.3)
+        not_ground2 = (ex.pcl_t1[:, 2] > 0.3) & (ex.pcl_t1[:, 2] < 2.3)
 
         sensor_SE3_ego = Se3(So3.from_matrix(ex.sensor.rot.float()[None]), ex.sensor.t.float()[None]).inverse()
 
