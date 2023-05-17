@@ -15,6 +15,7 @@ arch:
 
 optim:
   type: Adam
+  grad_clip: 1000
   args:
     lr: 0.004
     weight_decay: 0.0

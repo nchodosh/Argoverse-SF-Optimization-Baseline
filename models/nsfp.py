@@ -205,7 +205,7 @@ class SceneFlow(base.SceneFlow):
         loss = self.flow.compute_loss(fw_flow_pred + pcl_0, bw_flow_pred, pcl_0, pcl_1)
         optim.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.flow.parameters(), 0.01)
+        torch.nn.utils.clip_grad_norm_(self.flow.parameters(), self.opt.optim.grad_clip)
         optim.step()
         if isinstance(sched, ReduceLROnPlateau):
             sched.step(loss)
