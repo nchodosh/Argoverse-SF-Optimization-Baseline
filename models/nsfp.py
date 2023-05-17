@@ -32,8 +32,16 @@ def inlier_loss(x, k=0.3):
 def sheet_loss(model, xyz):
     ryp = utils.geometry.ryp(xyz)
     sheet_depth = model.depth_with_grad(ryp[:, 1:]).squeeze()
-    err = (sheet_depth - ryp[:, 0]).abs().clip(0, 1) ** 2
+    err = ((sheet_depth - ryp[:, 0]) ** 2).clip(0, 4)
     return err
+
+
+def plane_loss(model, xyz):
+    ryp = utils.geometry.ryp(xyz)
+    n, d = model.planes(ryp[:, 1:])
+    n = n.detach()
+    d = d.detach()
+    return (((n * xyz).sum(dim=-1) + d) ** 2).clip(0, 4)
 
 
 class SceneFlow(base.SceneFlow):
@@ -57,7 +65,7 @@ class SceneFlow(base.SceneFlow):
         else:
             set_global_sync(False)
 
-        if opt.optim.loss.type == "sheet":
+        if opt.optim.loss.type == "sheet" or opt.optim.loss.type == "plane":
             import sheet_models.base
 
             self.sheet, self.sheet_cfg = sheet_models.base.load(
@@ -220,6 +228,17 @@ class SceneFlow(base.SceneFlow):
         pcl_grad = pcl_0_def.grad.clone()
         return pcl_0_def.detach(), pcl_grad
 
+    def point_loss(self, pcl_0, pcl_1, e1_SE3_e0):
+        if self.opt.arch.motion_compensate:
+            pcl_input = transform_points(e1_SE3_e0.matrix(), pcl_0)
+        else:
+            pcl_input = pcl_0
+        fw_flow_pred = self.flow.fw(self.opt, pcl_input)
+        bw_flow_pred = self.flow.bw(self.opt, pcl_input + fw_flow_pred)
+        pcl_0_def = (pcl_input + fw_flow_pred).detach()
+        loss = self.flow.compute_loss(pcl_0_def, bw_flow_pred, pcl_input, pcl_1, reduction="none").detach()
+        return pcl_0_def, loss
+
     def load_parameters(self, filename: Path) -> None:
         """Load saved parameters for the underlying model.
 
@@ -229,7 +248,7 @@ class SceneFlow(base.SceneFlow):
         params = torch.load(filename, map_location=self.opt.device)["ckpt"]
         self.flow = Flow(self.opt).to(self.opt.device)
         self.flow.load_state_dict(params)
-        if self.opt.optim.loss.type == "sheet":
+        if self.opt.optim.loss.type == "sheet" or self.opt.optim.loss.type == "plane":
             self.flow.load_sheet(self.sheet, self.parameters_to_example(filename))
 
     def save_parameters(self, filename: Path) -> None:
@@ -274,7 +293,12 @@ class Flow(torch.nn.Module):
 
     @time_this()
     def compute_loss(
-        self, pcl_0_def: torch.Tensor, bw_flow_pred: torch.Tensor, pcl_0: torch.Tensor, pcl_1: torch.Tensor
+        self,
+        pcl_0_def: torch.Tensor,
+        bw_flow_pred: torch.Tensor,
+        pcl_0: torch.Tensor,
+        pcl_1: torch.Tensor,
+        reduction="mean",
     ) -> torch.Tensor:
         """Compute the optimization loss.
 
@@ -287,17 +311,25 @@ class Flow(torch.nn.Module):
         Returns:
             The total loss on the predictions.
         """
+        if reduction == "mean":
+            red = torch.mean
+        elif reduction == "none":
+            red = lambda x: x
+
         if self.opt.optim.loss.type == "chamfer":
-            l = lambda x, y: losses.trunc_chamfer(x, y, 2).mean()
+            l = lambda x, y: losses.trunc_chamfer(x, y, 2)
             timer_start(self, "fw_chamf")
             fw_chamf = l(pcl_0_def, pcl_1)
             timer_end(self, "fw_chamf")
             timer_start(self, "bw_chamf")
             bw_chamf = l(pcl_0_def - bw_flow_pred, pcl_0)
             timer_end(self, "bw_chamf")
-            return fw_chamf + bw_chamf
+            full_loss = torch.cat((fw_chamf, bw_chamf))
+            return red(full_loss)
         elif self.opt.optim.loss.type == "sheet":
-            return sheet_loss(self.sheet, pcl_0_def).float().mean()
+            return red(sheet_loss(self.sheet, pcl_0_def).float())
+        elif self.opt.optim.loss.type == "plane":
+            return red(plane_loss(self.sheet, pcl_0_def))
 
 
 class ImplicitFunction(torch.nn.Module):

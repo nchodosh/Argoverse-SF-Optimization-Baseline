@@ -8,12 +8,13 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm, trange
 
 import utils.options
+from utils import geometry
 from utils.geometry import yp_to_unit
 
 from . import base
 
 EVAL_CHUNK_SIZE = 20000
-MAX_DEPTH = 80
+MAX_DEPTH = 55
 
 
 class WorldSheet(base.WorldSheet):
@@ -24,6 +25,14 @@ class WorldSheet(base.WorldSheet):
         self.graph = Graph(opt)
         self.graph.to(opt.device)
         self.scheduler = getattr(torch.optim.lr_scheduler, opt.optim.sched.type)
+
+    def planes(self, coords):
+        normals = self.normals(coords)
+        ryp = self.points(coords)
+        xyz = geometry.xyz(ryp)
+
+        d = -(xyz * normals).sum(dim=-1, keepdim=True)
+        return normals, d
 
     def depth_with_grad(self, coords):
         x = self.graph.depth(coords)
@@ -42,6 +51,29 @@ class WorldSheet(base.WorldSheet):
             depth = x
         depth = depth.clip(0, MAX_DEPTH)
         return depth.detach().cpu()
+
+    def normals(self, coords):
+        if self.opt.out.type == "snorm":
+            xyz = geometry.xyz(self.points(coords)).detach().requires_grad_(True)
+            implicit_surface = lambda x: (self.graph._forward(geometry.ryp(x)[..., 1:]) * x).sum(dim=-1) - 1
+            surf = implicit_surface(xyz)
+            surf.sum().backward()
+            n = self.graph.normals(coords)  # xyz.grad.clone()
+            return n / n.norm(dim=-1, keepdim=True)
+
+        if self.opt.out.invert_depth:
+            to_depth = lambda x: (1 / x).clip(0, MAX_DEPTH)
+        else:
+            to_depth = lambda x: x.clip(0, MAX_DEPTH)
+        implicit_surface = lambda x: (
+            x.norm(dim=-1, keepdim=True) - to_depth(self.graph.depth(geometry.ryp(x)[..., 1:]))
+        )
+
+        xyz = geometry.xyz(self.points(coords)).detach().requires_grad_(True)
+        surf = implicit_surface(xyz)
+        surf.sum().backward()
+        n = xyz.grad.clone()
+        return n / n.norm(dim=-1, keepdim=True)
 
     def save_parameters(self, filename):
         g = self.graph.cpu()

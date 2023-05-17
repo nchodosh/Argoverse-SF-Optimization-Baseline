@@ -3,6 +3,7 @@ import torch
 from mayavi import mlab
 
 import data.utils
+import utils.geometry
 
 colors = sns.color_palette()
 
@@ -14,6 +15,26 @@ def gradients(model, datum):
     mlab.quiver3d(*pts.T, *grad.T, scalars=grad_norm, scale_mode="scalar", scale_factor=1000, figure=fig)
     mlab.points3d(*datum["pcl_1"].T, color=colors[0], scale_factor=0.05, figure=fig)
     mlab.points3d(*pts.T, color=colors[1], scale_factor=0.05, figure=fig)
+
+
+def sheet_normal(model, datum):
+    fig = mlab.figure(bgcolor=(0.0, 0.0, 0.0))
+    pc = datum["pcl_1"]
+    ryp = utils.geometry.ryp(pc)
+    breakpoint()
+    n = model.sheet.graph.normal(ryp[:, 1:]).detach()
+    mlab.quiver3d(*pc.T, *n.T, color=colors[1], mask_points=3, scale_factor=0.5)
+
+
+def loss(model, datum):
+    fig = mlab.figure(bgcolor=(0.0, 0.0, 0.0))
+    pts, loss = model.point_loss(datum["pcl_0"], datum["pcl_1"], datum["ego1_SE3_ego0"])
+    pts, grad = model.point_gradients(datum["pcl_0"], datum["pcl_1"], datum["ego1_SE3_ego0"])
+    mlab.points3d(*datum["pcl_1"].T, color=colors[0], scale_factor=0.05, figure=fig)
+    mlab.points3d(*pts.T, loss, colormap="Reds", scale_factor=0.05, figure=fig, scale_mode="none")
+    grad_norm = grad.norm(dim=-1).clip(0, 0.01)
+
+    mlab.quiver3d(*pts.T, *grad.T, scalars=grad_norm, scale_mode="scalar", scale_factor=100, figure=fig)
 
 
 def flow_pred(model, datum):
@@ -45,4 +66,4 @@ def flow_pred(model, datum):
     return fig, pts, tube, tube_surf
 
 
-visualizations = {"flow": flow_pred, "grad": gradients}
+visualizations = {"flow": flow_pred, "grad": gradients, "sheet_normal": sheet_normal, "loss": loss}
