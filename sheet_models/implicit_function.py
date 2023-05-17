@@ -50,7 +50,7 @@ class WorldSheet(base.WorldSheet):
         else:
             depth = x
         depth = depth.clip(0, MAX_DEPTH)
-        return depth.detach().cpu()
+        return depth
 
     def normals(self, coords):
         if self.opt.out.type == "snorm":
