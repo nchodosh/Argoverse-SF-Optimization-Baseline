@@ -32,7 +32,7 @@ def loss(model, datum):
     pts, grad = model.point_gradients(datum["pcl_0"], datum["pcl_1"], datum["ego1_SE3_ego0"])
     mlab.points3d(*datum["pcl_1"].T, color=colors[0], scale_factor=0.05, figure=fig)
     mlab.points3d(*pts.T, loss, colormap="Reds", scale_factor=0.05, figure=fig, scale_mode="none")
-    grad_norm = grad.norm(dim=-1).clip(0, 0.01)
+    grad_norm = grad.norm(dim=-1)
 
     mlab.quiver3d(*pts.T, *grad.T, scalars=grad_norm, scale_mode="scalar", scale_factor=100, figure=fig)
 

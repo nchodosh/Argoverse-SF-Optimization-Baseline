@@ -32,7 +32,7 @@ def inlier_loss(x, k=0.3):
 def sheet_loss(model, xyz):
     ryp = utils.geometry.ryp(xyz)
     sheet_depth = model.depth_with_grad(ryp[:, 1:]).squeeze()
-    err = ((sheet_depth - ryp[:, 0]) ** 2).clip(0, 4)
+    err = ((sheet_depth - ryp[:, 0]) ** 2).clip(0, 2)
     return err
 
 
@@ -41,7 +41,7 @@ def plane_loss(model, xyz):
     n, d = model.planes(ryp[:, 1:])
     n = n.detach()
     d = d.detach()
-    return (((n * xyz).sum(dim=-1) + d) ** 2).clip(0, 4)
+    return (((n * xyz).sum(dim=-1, keepdim=True) + d) ** 2).clip(0, 2).squeeze()
 
 
 class SceneFlow(base.SceneFlow):
@@ -164,7 +164,7 @@ class SceneFlow(base.SceneFlow):
         best_loss = float("inf")
         best_params = self.flow.state_dict()
 
-        if self.opt.optim.loss.type == "sheet":
+        if self.opt.optim.loss.type == "sheet" or self.opt.optim.loss.type == "plane":
             self.flow.load_sheet(self.sheet, example_name)
 
         for self.it in pbar:

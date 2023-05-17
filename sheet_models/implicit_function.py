@@ -58,7 +58,7 @@ class WorldSheet(base.WorldSheet):
             implicit_surface = lambda x: (self.graph._forward(geometry.ryp(x)[..., 1:]) * x).sum(dim=-1) - 1
             surf = implicit_surface(xyz)
             surf.sum().backward()
-            n = self.graph.normals(coords)  # xyz.grad.clone()
+            n = xyz.grad.clone()
             return n / n.norm(dim=-1, keepdim=True)
 
         if self.opt.out.invert_depth:
