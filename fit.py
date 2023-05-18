@@ -125,5 +125,5 @@ if __name__ == "__main__":
         subset_size=args.subset,
         chunk=(args.chunks, args.chunk_number),
         output_root=output_root,
-        files=args.files,
+        files=[Path(f) for f in args.files] if args.files is not None else None,
     )
