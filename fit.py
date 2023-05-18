@@ -4,7 +4,7 @@ import argparse
 import importlib
 from pathlib import Path
 from random import sample, seed
-from typing import Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -24,6 +24,7 @@ def fit(
     output_root: Path,
     subset_size: int = 0,
     chunk: Tuple[int, int] = (1, 1),
+    files: Optional[List[Path]] = None,
 ) -> None:
     """Fit a scene flow model.
 
@@ -39,10 +40,13 @@ def fit(
                Useful for running multiple jobs in parallel.
     """
 
-    inds = list(range(len(data_loader)))
-    if subset_size > 0:
-        seed(0)
-        inds = sample(inds, subset_size)
+    if files is not None:
+        inds = [data_loader.example_id_to_index(data_loader.file_to_id(f)) for f in files]
+    else:
+        inds = list(range(len(data_loader)))
+        if subset_size > 0:
+            seed(0)
+            inds = sample(inds, subset_size)
     inds = np.array_split(inds, chunk[0])[chunk[1] - 1]
 
     for i in tqdm(inds):
@@ -91,6 +95,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--chunk_number", type=int, default=1, help="which chunk to process")
     parser.add_argument("--subset", type=int, default=0, help="If >0 only use SUBSET random examples from the dataset.")
+    parser.add_argument("--files", nargs="*", type=str, default=None, help="explicit list of files to process")
 
     args = parser.parse_args()
 
@@ -120,4 +125,5 @@ if __name__ == "__main__":
         subset_size=args.subset,
         chunk=(args.chunks, args.chunk_number),
         output_root=output_root,
+        files=args.files,
     )

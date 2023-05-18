@@ -26,7 +26,7 @@ class SceneFlow:
             output_root: The root directory to save output files in.
         """
         self.opt = opt
-        self.parameters_glob = "*.pkl"
+        self.parameters_suffix = ".pt"
         self.output_root = output_root
 
     def __call__(self, pcl_0: torch.Tensor, e1_SE3_e0: Se3) -> torch.Tensor:

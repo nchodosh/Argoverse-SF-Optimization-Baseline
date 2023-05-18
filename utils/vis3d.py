@@ -39,7 +39,7 @@ def loss(model, datum):
 
 def flow_pred(model, datum):
     fig = mlab.figure(bgcolor=(0.0, 0.0, 0.0))
-    emax = 0.3
+    emax = 0.5
 
     pred, dynamic = model(datum["pcl_0"], datum["ego1_SE3_ego0"])
     pcl_0, gt = data.utils.motion_compensate(datum)
@@ -47,7 +47,7 @@ def flow_pred(model, datum):
     error = torch.clip(torch.norm(gt - pred, dim=-1), 0, emax)
 
     mlab.points3d(*datum["pcl_1"].T, color=colors[0], scale_factor=0.05, figure=fig)
-    mlab.points3d(*pcl_0.T, error, scale_factor=0.05, figure=fig, scale_mode="none")
+    mlab.points3d(*pcl_0.T, color=colors[1], scale_factor=0.05, figure=fig, scale_mode="none")
 
     big_flows = torch.norm(pred, dim=-1) > 0.05
 
@@ -62,7 +62,7 @@ def flow_pred(model, datum):
     pts.mlab_source.dataset.lines = connections.numpy()
     tube = mlab.pipeline.tube(pts, tube_radius=0.01)
     tube_surf = mlab.pipeline.surface(tube, vmin=0, vmax=emax, opacity=1.0)
-    tube.children[0].scalar_lut_manager.lut_mode = "bwr"
+    tube.children[0].scalar_lut_manager.lut_mode = "Reds"
     return fig, pts, tube, tube_surf
 
 

@@ -34,7 +34,7 @@ def sheet_loss(model, xyz):
     sheet_depth = model.depth_with_grad(ryp[:, 1:]).squeeze()
     invalid = torch.isnan(sheet_depth)
     sheet_depth[invalid] = 0
-    err = (sheet_depth - ryp[:, 0]).abs().clip(0, 1.5) ** 2
+    err = (sheet_depth - ryp[:, 0]).abs().clip(0, 2) ** 2
     err[invalid] = 0
     return err
 
@@ -62,6 +62,7 @@ class SceneFlow(base.SceneFlow):
             output_root: The root directory to save output files in.
         """
         super().__init__(opt, output_root)
+        self.parameters_suffix = ".pt"
         self.e1_SE3_e0: Optional[Se3] = None
         if opt.timing:
             set_global_sync(True)

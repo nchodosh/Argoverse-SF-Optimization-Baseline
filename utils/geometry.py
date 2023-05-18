@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from kornia.geometry.linalg import transform_points
 
 
 def ego_to_sensor(pc, sensor):
@@ -80,3 +81,10 @@ def dense_sample_area(ryp, yaw_samples=2000, pitch_samples=500):
     p, y = torch.meshgrid(beam_pitches, beam_yaws, indexing="ij")
     yp = torch.cat((y.reshape(-1, 1), p.reshape(-1, 1)), dim=-1)
     return yp
+
+
+def compute_dynamic_mask(pcl_0, flow, e1_SE3_e0):
+    rigid_flow = (transform_points(e1_SE3_e0.matrix(), pcl_0) - pcl_0).detach()
+    non_rigid_flow = flow - rigid_flow
+    dynamic_mask = non_rigid_flow.norm(dim=-1) > 0.05
+    return dynamic_mask

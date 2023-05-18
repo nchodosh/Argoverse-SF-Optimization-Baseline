@@ -55,6 +55,9 @@ class Dataloader(Dataset):
             "background_mask": ex.ego_flow_mask,
         }
 
+    def file_to_id(self, file: Path) -> str:
+        return file.stem
+
     def example_id_to_index(self, example_id: str) -> int:
         for i, file in enumerate(self.files):
             if file.stem == example_id:
