@@ -44,7 +44,7 @@ def plane_loss(model, xyz):
     n, d = model.planes(ryp[:, 1:])
     n = n.detach()
     d = d.detach()
-    return (((n * xyz).sum(dim=-1, keepdim=True) + d) ** 2).clip(0, 2)
+    return (((n * xyz).sum(dim=-1, keepdim=True) + d) ** 2).clip(0, 2)b
 
 
 class SceneFlow(base.SceneFlow):

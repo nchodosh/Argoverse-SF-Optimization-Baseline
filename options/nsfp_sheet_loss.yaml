@@ -33,5 +33,5 @@ optim:
   chamfer_radius: 2
   loss:
     type: sheet
-    models_root: ../beyond-chamfer/world_sheet/outputs/impl_new_default/nuscenes/
+    models_root: ../beyond-chamfer/world_sheet/outputs/impl/nuscenes/
   
