@@ -51,6 +51,7 @@ class SceneFlow(base.SceneFlow):
         pcl_1: torch.Tensor,
         e1_SE3_e0: Se3,
         flow: Optional[torch.Tensor] = None,
+        example_name: Optional[str] = None,
     ) -> None:
         """Fit the model parameters on a a set of points.
 
