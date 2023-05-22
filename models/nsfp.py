@@ -36,7 +36,7 @@ def sheet_loss(model, xyz):
     sheet_depth[invalid] = 0
     err = (sheet_depth - ryp[:, 0]).abs().clip(0, 2) ** 2
     err[invalid] = 0
-    return err
+    return err[..., None]
 
 
 def plane_loss(model, xyz):
@@ -44,7 +44,7 @@ def plane_loss(model, xyz):
     n, d = model.planes(ryp[:, 1:])
     n = n.detach()
     d = d.detach()
-    return (((n * xyz).sum(dim=-1, keepdim=True) + d) ** 2).clip(0, 2).squeeze()
+    return (((n * xyz).sum(dim=-1, keepdim=True) + d) ** 2).clip(0, 2)
 
 
 class SceneFlow(base.SceneFlow):
