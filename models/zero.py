@@ -17,7 +17,7 @@ class SceneFlow(base.SceneFlow):
         opt: A namespace conftaining the model configuration.
     """
 
-    def __init__(self, opt: SimpleNamespace) -> None:
+    def __init__(self, opt: SimpleNamespace, output_root: Path) -> None:
         """Create a scene flow model based on the configuration in opt.
 
         Args:
