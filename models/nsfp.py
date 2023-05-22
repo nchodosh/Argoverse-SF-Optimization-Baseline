@@ -315,25 +315,32 @@ class Flow(torch.nn.Module):
         Returns:
             The total loss on the predictions.
         """
+        if self.opt.optim.loss.type == "chamfer":
+            timer_start(self, "fw_chamf")
+            fw_loss = losses.trunc_chamfer(pcl_0_def, pcl_1, 2)
+            timer_end(self, "fw_chamf")
+        elif self.opt.optim.loss.type == "nn":
+            timer_start(self, "fw_chamf")
+            fw_loss = losses.trunc_nn(pcl_0_def, pcl_1, 2)
+            timer_end(self, "fw_chamf")
+        elif self.opt.optim.loss.type == "sheet":
+            fw_loss = sheet_loss(self.sheet, pcl_0_def).float()
+        elif self.opt.optim.loss.type == "plane":
+            fw_loss = plane_loss(self.sheet, pcl_0_def)
+
+        if self.optim.bw_flow:
+            timer_start(self, "bw_chamf")
+            bw_chamf = losses.trunc_chamfer(pcl_0_def - bw_flow_pred, pcl_0, 2)
+            timer_end(self, "bw_chamf")
+            full_loss = torch.cat((fw_loss, bw_chamf))
+        else:
+            full_loss = fw_loss
+
         if reduction == "mean":
             red = torch.mean
         elif reduction == "none":
             red = lambda x: x
-
-        if self.opt.optim.loss.type == "chamfer":
-            l = lambda x, y: losses.trunc_chamfer(x, y, 2)
-            timer_start(self, "fw_chamf")
-            fw_chamf = l(pcl_0_def, pcl_1)
-            timer_end(self, "fw_chamf")
-            timer_start(self, "bw_chamf")
-            bw_chamf = l(pcl_0_def - bw_flow_pred, pcl_0)
-            timer_end(self, "bw_chamf")
-            full_loss = torch.cat((fw_chamf, bw_chamf))
-            return red(full_loss)
-        elif self.opt.optim.loss.type == "sheet":
-            return red(sheet_loss(self.sheet, pcl_0_def).float())
-        elif self.opt.optim.loss.type == "plane":
-            return red(plane_loss(self.sheet, pcl_0_def))
+        return red(full_loss)
 
 
 class ImplicitFunction(torch.nn.Module):

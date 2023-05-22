@@ -24,6 +24,8 @@ optim:
     args:
       gamma: 0.5
       step_size: 500
+
+  bw_flow: true
       
   debug: false
   iters: 2000
