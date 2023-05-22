@@ -38,8 +38,6 @@ class SceneFlow(base.SceneFlow):
             flow: (N,3) tensor of flow predictions.
             is_dynamic (N,) Dynamic segmentation predictions
         """
-        if self.R is None:
-            raise RuntimeError("Model has not been fit")
         pred = transform_points(e1_SE3_e0.matrix(), pcl_0) - pcl_0
         is_dynamic = torch.zeros(len(pcl_0), dtype=bool)
 
