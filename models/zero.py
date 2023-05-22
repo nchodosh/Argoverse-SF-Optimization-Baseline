@@ -1,5 +1,10 @@
 """Zero Flow."""
+from pathlib import Path
+from types import SimpleNamespace
+from typing import List, Optional, Tuple
 
+import torch
+from kornia.geometry.liegroup import Se3
 from kornia.geometry.linalg import transform_points
 
 import models.base as base
@@ -79,4 +84,4 @@ class SceneFlow(base.SceneFlow):
         Raises:
             NotImplementedError: If the subclass has not implemented this.
         """
-        pass
+        filename.touch()
