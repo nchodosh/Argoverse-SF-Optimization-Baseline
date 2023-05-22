@@ -328,7 +328,7 @@ class Flow(torch.nn.Module):
         elif self.opt.optim.loss.type == "plane":
             fw_loss = plane_loss(self.sheet, pcl_0_def)
 
-        if self.optim.bw_flow:
+        if self.opt.optim.bw_flow:
             timer_start(self, "bw_chamf")
             bw_chamf = losses.trunc_chamfer(pcl_0_def - bw_flow_pred, pcl_0, 2)
             timer_end(self, "bw_chamf")
