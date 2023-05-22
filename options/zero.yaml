@@ -1,0 +1,3 @@
+cfg_name: zero
+device: cpu
+timing: false
