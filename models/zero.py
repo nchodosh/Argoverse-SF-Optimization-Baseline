@@ -84,4 +84,4 @@ class SceneFlow(base.SceneFlow):
         Raises:
             NotImplementedError: If the subclass has not implemented this.
         """
-        filename.touch()
+        filename.with_suffix(".pt").touch()
