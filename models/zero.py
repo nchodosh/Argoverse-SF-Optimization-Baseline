@@ -24,6 +24,7 @@ class SceneFlow(base.SceneFlow):
             opt: A nested namespace specificying the configuration.
         """
         self.opt = opt
+        self.flow = torch.nn.Identity()
 
     def __call__(self, pcl_0: torch.Tensor, e1_SE3_e0: Se3) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the model on a a set of points.
