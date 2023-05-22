@@ -1,4 +1,4 @@
 cfg_name: zero
-model_name: nsfp
+model_name: zero
 device: cpu
 timing: false
