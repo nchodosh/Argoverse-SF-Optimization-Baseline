@@ -345,7 +345,10 @@ class Flow(torch.nn.Module):
             timer_start(self, "bw_chamf")
             bw_chamf = losses.trunc_chamfer(pcl_0_def - bw_flow_pred, pcl_0, 2)
             timer_end(self, "bw_chamf")
-            full_loss = torch.cat((fw_loss, bw_chamf))
+            if fw_loss.dim() == 0:
+                full_loss = fw_loss + bw_chamf.mean()
+            else:
+                full_loss = torch.cat((fw_loss, bw_chamf))
         else:
             full_loss = fw_loss
 
