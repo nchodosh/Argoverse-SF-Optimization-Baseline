@@ -13,9 +13,11 @@ from kornia.geometry.liegroup import Se3
 from kornia.geometry.linalg import transform_points
 from nntime import export_timings, set_global_sync, time_this, timer_end, timer_start
 from pytorch3d.ops import knn_points
+from pytorch3d.structures import Pointclouds
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import losses
+import mesh_loss
 import models.base as base
 import utils
 import utils.dotdict
@@ -170,6 +172,8 @@ class SceneFlow(base.SceneFlow):
 
         if self.opt.optim.loss.type == "sheet" or self.opt.optim.loss.type == "plane":
             self.flow.load_sheet(self.sheet, example_name)
+        elif self.opt.optim.loss.type == "mesh":
+            self.flow.load_mesh(example_name)
 
         for self.it in pbar:
             timer_start(self.flow, "full_iteration")
@@ -255,6 +259,8 @@ class SceneFlow(base.SceneFlow):
         self.flow.load_state_dict(params)
         if self.opt.optim.loss.type == "sheet" or self.opt.optim.loss.type == "plane":
             self.flow.load_sheet(self.sheet, self.parameters_to_example(filename))
+        elif self.opt.optim.loss.type == "mesh":
+            self.flow.load_mesh(self.parameters_to_example(filename))
 
     def save_parameters(self, filename: Path) -> None:
         """Save parameters for the underlying model.
@@ -295,6 +301,10 @@ class Flow(torch.nn.Module):
         self.sheet = sheet
         self.sheet.load_parameters(result_file)
 
+    def load_mesh(self, example_name):
+        mesh_file = (Path(self.opt.optim.loss.mesh_root) / example_name).with_suffix(".pt")
+        self.mesh = torch.load(mesh_file).to(self.opt.device)
+
     @time_this()
     def compute_loss(
         self,
@@ -327,6 +337,9 @@ class Flow(torch.nn.Module):
             fw_loss = sheet_loss(self.sheet, pcl_0_def).float()
         elif self.opt.optim.loss.type == "plane":
             fw_loss = plane_loss(self.sheet, pcl_0_def)
+        elif self.opt.optim.loss.type == "mesh":
+            ptf, ftp = mesh_loss.point_mesh_face_distance(self.mesh, Pointclouds(pcl_0_def[None].float()))
+            fw_loss = ptf.mean() + ftp.mean()
 
         if self.opt.optim.bw_flow:
             timer_start(self, "bw_chamf")

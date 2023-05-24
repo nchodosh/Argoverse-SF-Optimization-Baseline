@@ -1,0 +1,36 @@
+cfg_name: nsfp_mesh_loss
+model_name: nsfp
+device: cuda
+timing: false
+
+arch:
+  filter_size: 128
+  activ: relu
+  pos_enc: False
+  L: 4
+  pos_scale: 100
+  backward_flow: True
+  motion_compensate: True
+  refine: False
+
+optim:
+  type: Adam
+  grad_clip: 0.1
+  args:
+    lr: 0.004
+    weight_decay: 0.000
+  sched:
+    type: StepLR
+    args:
+      gamma: 0.5
+      step_size: 1000
+
+  bw_flow: true
+      
+  debug: false
+  iters: 2000
+  early_patience: 100
+  chamfer_radius: 2
+  loss:
+    type: mesh
+    mesh_root: ../beyond-chamfer/world_sheet/meshes/bary/nuscenes/

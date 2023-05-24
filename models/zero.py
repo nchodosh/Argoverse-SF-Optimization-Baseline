@@ -1,4 +1,5 @@
 """Zero Flow."""
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from typing import List, Optional, Tuple
@@ -85,3 +86,16 @@ class SceneFlow(base.SceneFlow):
             NotImplementedError: If the subclass has not implemented this.
         """
         filename.with_suffix(".pt").touch()
+
+    def parameters_to_example(self, filename: Path) -> str:
+        """Get the coresponding example for the given parameter output file.
+
+        Args:
+            filename: Path used to save parameters for the model.
+
+        Returns:
+            The example_id associated with the filename.
+        """
+        if re.match("\d+", filename.stem):
+            return filename.parent.stem
+        return filename.stem
