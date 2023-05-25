@@ -352,6 +352,8 @@ class Flow(torch.nn.Module):
             red = torch.mean
         elif reduction == "none":
             red = lambda x: x
+        print(fw_loss.shape)
+        print(bw_loss.shape)
         return red(torch.cat((red(fw_loss), red(bw_loss))))
 
 
