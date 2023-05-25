@@ -54,7 +54,7 @@ def point_mesh_face_distance(
 
     # point to face distance: shape (P,)
     point_to_face = point_face_distance(points, points_first_idx, tris, tris_first_idx, max_points, min_triangle_area)
-    point_to_face = point_to_face.clip(0, 4)
+    point_to_face = point_to_face.clip(0, 2)
 
     # face to point distance: shape (T,)
     # face_to_point = face_point_distance(points, points_first_idx, tris, tris_first_idx, max_tris, min_triangle_area)
