@@ -339,7 +339,7 @@ class Flow(torch.nn.Module):
             fw_loss = plane_loss(self.sheet, pcl_0_def)
         elif self.opt.optim.loss.type == "mesh":
             ptf, ftp = mesh_loss.point_mesh_face_distance(self.mesh, Pointclouds(pcl_0_def[None].float()))
-            fw_loss = ptf
+            fw_loss = ptf[:, None]
 
         if self.opt.optim.bw_flow:
             timer_start(self, "bw_chamf")
