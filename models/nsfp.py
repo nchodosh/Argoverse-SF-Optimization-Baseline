@@ -245,7 +245,7 @@ class SceneFlow(base.SceneFlow):
         fw_flow_pred = self.flow.fw(self.opt, pcl_input)
         bw_flow_pred = self.flow.bw(self.opt, pcl_input + fw_flow_pred)
         pcl_0_def = (pcl_input + fw_flow_pred).detach()
-        loss = self.flow.compute_loss(pcl_0_def, bw_flow_pred, pcl_input, pcl_1, reduction="none").detach()
+        loss = self.flow.compute_loss(pcl_0_def, bw_flow_pred, pcl_input, pcl_1, reduction="none").detach().squeeze()
         return pcl_0_def, loss
 
     def load_parameters(self, filename: Path) -> None:
@@ -343,20 +343,16 @@ class Flow(torch.nn.Module):
 
         if self.opt.optim.bw_flow:
             timer_start(self, "bw_chamf")
-            bw_chamf = losses.trunc_chamfer(pcl_0_def - bw_flow_pred, pcl_0, 2)
+            bw_loss = losses.trunc_chamfer(pcl_0_def - bw_flow_pred, pcl_0, 2)
             timer_end(self, "bw_chamf")
-            if fw_loss.dim() == 0:
-                full_loss = fw_loss + bw_chamf.mean()
-            else:
-                full_loss = torch.cat((fw_loss, bw_chamf))
         else:
-            full_loss = fw_loss
+            bw_loss = torch.zeros((0, 1))
 
         if reduction == "mean":
             red = torch.mean
         elif reduction == "none":
             red = lambda x: x
-        return red(full_loss)
+        return red(torch.cat((red(fw_loss), red(bw_loss))))
 
 
 class ImplicitFunction(torch.nn.Module):
