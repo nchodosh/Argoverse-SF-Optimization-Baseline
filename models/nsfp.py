@@ -349,12 +349,9 @@ class Flow(torch.nn.Module):
             bw_loss = torch.zeros((0, 1))
 
         if reduction == "mean":
-            red = torch.mean
+            return fw_loss.mean() + bw_loss.mean()
         elif reduction == "none":
-            red = lambda x: x
-        print(fw_loss.shape)
-        print(bw_loss.shape)
-        return red(torch.cat((red(fw_loss), red(bw_loss))))
+            return torch.cat(fw_loss, bw_loss)
 
 
 class ImplicitFunction(torch.nn.Module):
