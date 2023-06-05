@@ -234,7 +234,7 @@ class SceneFlow(base.SceneFlow):
         pcl_0_def = (pcl_input + fw_flow_pred).detach().requires_grad_(True)
         loss = self.flow.compute_loss(pcl_0_def, bw_flow_pred, pcl_input, pcl_1)
         loss.backward()
-        pcl_grad = pcl_0_def.grad.clone()
+        pcl_grad = -pcl_0_def.grad.clone()
         return pcl_0_def.detach(), pcl_grad
 
     def point_loss(self, pcl_0, pcl_1, e1_SE3_e0):
@@ -343,7 +343,7 @@ class Flow(torch.nn.Module):
 
         if self.opt.optim.bw_flow:
             timer_start(self, "bw_chamf")
-            bw_loss = losses.trunc_chamfer(pcl_0_def - bw_flow_pred, pcl_0, 2)
+            bw_loss = losses.trunc_chamfer(pcl_0_def - bw_flow_pred, pcl_0, 2) * self.opt.optim.bw_flow_weight
             timer_end(self, "bw_chamf")
         else:
             bw_loss = torch.zeros((0, 1))
@@ -351,7 +351,7 @@ class Flow(torch.nn.Module):
         if reduction == "mean":
             return fw_loss.mean() + bw_loss.mean()
         elif reduction == "none":
-            return torch.cat(fw_loss, bw_loss)
+            return torch.cat((fw_loss, bw_loss))
 
 
 class ImplicitFunction(torch.nn.Module):
