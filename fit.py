@@ -99,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument("--subset", type=int, default=0, help="If >0 only use SUBSET random examples from the dataset.")
     parser.add_argument("--files", nargs="*", type=str, default=None, help="explicit list of files to process")
     parser.add_argument("--start_idx", type=int, default=0, help="index to start at")
+    parser.add_argument("--keep_ground", action="store_true", help="don't filter ground points")
 
     args = parser.parse_args()
 
@@ -120,7 +121,7 @@ if __name__ == "__main__":
     elif args.dataset == "nuscenes":
         import data.nuscenes
 
-        data_loader = data.nuscenes.Dataloader(data_root=args.inputs)
+        data_loader = data.nuscenes.Dataloader(data_root=args.inputs, remove_ground=not args.keep_ground)
 
     fit(
         model,

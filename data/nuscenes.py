@@ -11,8 +11,9 @@ from utils.torch import numpy_to_torch
 
 
 class Dataloader(Dataset):
-    def __init__(self, data_root="inputs"):
+    def __init__(self, data_root="inputs", remove_ground=True):
         self.files = sorted(list((Path(data_root) / "nuscenes").rglob("*.pkl")))
+        self.remove_ground = remove_ground
 
     def __len__(self):
         return len(self.files)
@@ -31,12 +32,15 @@ class Dataloader(Dataset):
         pcl_2 = transform_points(sensor_SE3_ego.matrix(), ex.pcl_t1[:, :3]).detach()
 
         _, m1 = geometry.filter_range(pcl_1, return_mask=True)
-        m1 = m1 & not_ground1
+
+        if self.remove_ground:
+            m1 = m1 & not_ground1
         pcl_1 = pcl_1[m1]
         flow = flow[m1]
 
         _, m2 = geometry.filter_range(pcl_2, return_mask=True)
-        m2 = m2 & not_ground2
+        if self.remove_ground:
+            m2 = m2 & not_ground2
         pcl_2 = pcl_2[m2]
 
         annotations = ex.annotation_labels[m1]
