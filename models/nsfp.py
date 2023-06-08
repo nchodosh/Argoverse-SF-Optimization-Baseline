@@ -343,7 +343,7 @@ class Flow(torch.nn.Module):
 
         if self.opt.optim.bw_flow:
             timer_start(self, "bw_chamf")
-            bw_loss = losses.trunc_chamfer(pcl_0_def - bw_flow_pred, pcl_0, 2) * self.opt.optim.bw_flow_weight
+            bw_loss = losses.trunc_chamfer(pcl_0_def - bw_flow_pred, pcl_0, 2)
             timer_end(self, "bw_chamf")
         else:
             bw_loss = torch.zeros((0, 1))

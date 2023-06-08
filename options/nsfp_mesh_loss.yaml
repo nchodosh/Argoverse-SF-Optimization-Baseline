@@ -26,7 +26,6 @@ optim:
       step_size: 1000
 
   bw_flow: true
-  bw_flow_weight: 10
       
   debug: false
   iters: 2000
